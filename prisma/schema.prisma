@@ -1,0 +1,171 @@
+// Projexa Hub Central — data model
+// PostgreSQL in every environment (e.g. Neon). DATABASE_URL comes from .env locally
+// and from the hosting provider's environment variables in production (see README).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/// An official department or team. Alumni and Campus Chapter are teams like any other
+/// so they are always included in Analytics.
+model Team {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  name        String
+  description String   @default("")
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  members     User[]
+  attendance  Attendance[]
+  kpis        Kpi[]
+  reports     WeeklyReport[]
+  evaluations Evaluation[]
+}
+
+model User {
+  id           String  @id @default(cuid())
+  email        String  @unique
+  passwordHash String
+  name         String
+  /// FOUNDER | HEAD | MEMBER
+  role         String  @default("MEMBER")
+  position     String  @default("")
+  bio          String  @default("")
+  professional String  @default("")
+  phone        String  @default("")
+  linkedin     String  @default("")
+  /// Profile picture is stored as an external link, not an uploaded file.
+  avatarUrl    String  @default("")
+  showContact  Boolean @default(true)
+  active       Boolean @default(true)
+
+  /// Confidential access is granted explicitly, never by department membership.
+  canViewFinance Boolean @default(false)
+  canViewHR      Boolean @default(false)
+
+  teamId String?
+  team   Team?   @relation(fields: [teamId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  attendance          Attendance[]   @relation("AttendanceMember")
+  attendanceRecorded  Attendance[]   @relation("AttendanceRecorder")
+  kpisUpdated         Kpi[]
+  reports             WeeklyReport[] @relation("ReportAuthor")
+  reportsReviewed     WeeklyReport[] @relation("ReportReviewer")
+  evaluations         Evaluation[]   @relation("EvaluationSubject")
+  evaluationsWritten  Evaluation[]   @relation("EvaluationAuthor")
+  hqRecordsUpdated    HqRecord[]
+}
+
+model Attendance {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation("AttendanceMember", fields: [userId], references: [id], onDelete: Cascade)
+  teamId       String
+  team         Team     @relation(fields: [teamId], references: [id])
+  /// YYYY-MM-DD
+  date         String
+  session      String
+  /// PRESENT | ABSENT | LATE | EXCUSED
+  status       String
+  remarks      String   @default("")
+  recordedById String
+  recordedBy   User     @relation("AttendanceRecorder", fields: [recordedById], references: [id])
+  createdAt    DateTime @default(now())
+
+  @@unique([userId, date, session])
+  @@index([teamId, date])
+}
+
+/// Weekly KPI matrix row. Measures performance — never a task assignment.
+model Kpi {
+  id          String   @id @default(cuid())
+  teamId      String
+  team        Team     @relation(fields: [teamId], references: [id])
+  name        String
+  description String   @default("")
+  target      Float
+  unit        String   @default("")
+  /// ISO week, e.g. 2026-W44
+  period      String
+  actual      Float?
+  remarks     String   @default("")
+  updatedById String
+  updatedBy   User     @relation(fields: [updatedById], references: [id])
+  updatedAt   DateTime @updatedAt
+  createdAt   DateTime @default(now())
+
+  @@index([teamId, period])
+}
+
+model WeeklyReport {
+  id            String    @id @default(cuid())
+  userId        String
+  user          User      @relation("ReportAuthor", fields: [userId], references: [id], onDelete: Cascade)
+  teamId        String
+  team          Team      @relation(fields: [teamId], references: [id])
+  period        String
+  kpiResults    String    @default("")
+  contributions String    @default("")
+  challenges    String    @default("")
+  remarks       String    @default("")
+  /// Newline-separated external URLs
+  links         String    @default("")
+  /// SUBMITTED | REVIEWED
+  status        String    @default("SUBMITTED")
+  reviewedById  String?
+  reviewedBy    User?     @relation("ReportReviewer", fields: [reviewedById], references: [id])
+  reviewedAt    DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@unique([userId, period])
+  @@index([teamId, period])
+}
+
+/// Qualitative monthly evaluation. No combined/weighted score is stored or generated
+/// (a formula must first be approved by Projexa Hub — PRD §5.9).
+model Evaluation {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation("EvaluationSubject", fields: [userId], references: [id], onDelete: Cascade)
+  teamId       String
+  team         Team     @relation(fields: [teamId], references: [id])
+  /// YYYY-MM
+  month        String
+  attendance   String   @default("")
+  kpi          String   @default("")
+  reporting    String   @default("")
+  contributions String  @default("")
+  strengths    String   @default("")
+  improvements String   @default("")
+  remarks      String   @default("")
+  evaluatorId  String
+  evaluator    User     @relation("EvaluationAuthor", fields: [evaluatorId], references: [id])
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([userId, month])
+}
+
+/// A row in one of the fixed, developer-defined HQ section tables
+/// (see src/lib/hq-config.ts). `data` is JSON validated against that section's fields.
+model HqRecord {
+  id          String   @id @default(cuid())
+  space       String
+  section     String
+  data        String
+  updatedById String
+  updatedBy   User     @relation(fields: [updatedById], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([space, section])
+}
