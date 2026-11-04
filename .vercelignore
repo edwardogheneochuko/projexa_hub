@@ -1,0 +1,12 @@
+# Never upload secrets, local data or build output when deploying from the CLI.
+.env
+.env.*
+!.env.example
+.neon
+prisma/*.db
+prisma/*.db-journal
+.next
+node_modules
+.claude
+skills-lock.json
+*.tsbuildinfo
