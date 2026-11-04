@@ -20,17 +20,26 @@ npm run setup        # creates the tables and loads demo data
 npm run dev          # http://localhost:3000
 ```
 
-Every demo account uses the password **`Password123!`**.
+`npm run setup` loads demo data for local development only. `npm run db:seed` resets all data to that demo state. **Never run either against production.**
 
-| Role | Email |
-|---|---|
-| Founder | `founder@projexahub.test` |
-| Department Head (Marketing) | `adaeze.okafor@projexahub.test` |
-| Team Member (Marketing) | `tobi.adeyemi@projexahub.test` |
-| Finance Head (has Finance access) | `ngozi.umeh@projexahub.test` |
-| Finance Member (no Finance access) | `ibrahim.musa@projexahub.test` |
+## Accounts and passwords
 
-`npm run db:seed` resets all data to the demo state. **Never run it against production.**
+Every account is `<username>@projexahub.com`. People sign in with just their username.
+
+1. The Founder adds a person in **Settings & permissions → Add person**, choosing their username. No password is set.
+2. The app shows a one-time **setup code** (valid 7 days, 5 attempts). The Founder gives the username and code to the person.
+3. The person opens **First time here? / Reset password** on the sign-in page, enters both, and chooses their own password.
+
+**Forgot password:** the person clicks **Forgot password?** and enters their username. The request appears at the top of Settings. The Founder clicks **Reset password**, which issues a new setup code (their old password stops working), and the person sets a new password as in step 3.
+
+**The Founder's own account** (first set-up, or a forgotten Founder password) is handled from the command line by whoever manages the server:
+
+```bash
+npm run account:code -- <username> --create-founder "Full Name"   # create the first Founder
+npm run account:code -- <username>                                # new setup code for an existing account
+```
+
+This uses the database in `DATABASE_URL`, so point it at the production database when needed.
 
 Other scripts: `npm run build`, `npm run typecheck`, `npm run lint`.
 
@@ -108,7 +117,7 @@ Every page and server action re-checks permissions on the server. The middleware
    - `AUTH_SECRET`: a new long random string (not the one from your local `.env`)
 4. Create the tables once, from your machine, against the production database: `DATABASE_URL="<production url>" npx prisma db push`
 5. Redeploy in Vercel so it picks up the variables.
-6. Create the real Founder account. Either run a one-off script based on `prisma/seed.ts` (founder only, real email, strong password), or seed the demo data, sign in as the demo founder, create the real accounts and then deactivate the demo accounts.
+6. Create the real Founder account: `DATABASE_URL="<production url>" npm run account:code -- <username> --create-founder "Full Name"`, then sign in with the setup code and add everyone else in Settings.
 
 There is no file storage, so there are no storage costs, and there are no per-user licence costs.
 
@@ -129,6 +138,6 @@ KPIs measure performance and are never used to assign tasks.
 
 ## Known limitations and next steps
 
-- Passwords are set by the Founder. There is no self-service password reset by email yet.
+- Password resets go through the Founder (no email sending yet). Email-based reset could be added with an email provider.
 - Exports are via "Print / save as PDF" on the Performance reports page. CSV export could be added.
 - Expected reports are based on current team membership, so they are not adjusted for people who joined or left part-way through a period.

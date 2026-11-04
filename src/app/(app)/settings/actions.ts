@@ -1,10 +1,10 @@
 "use server";
 
-import bcrypt from "bcryptjs";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { requireFounder } from "@/lib/auth";
+import { SETUP_CODE_DAYS, isValidUsername, issueSetupCode, toEmail, usernameOf } from "@/lib/accounts";
 import type { ActionResult } from "@/lib/utils";
 
 const str = (fd: FormData, k: string, max = 500) => String(fd.get(k) ?? "").trim().slice(0, max);
@@ -13,25 +13,26 @@ const ROLES = ["FOUNDER", "HEAD", "MEMBER"];
 export async function saveUser(id: string | null, _prev: ActionResult, fd: FormData): Promise<ActionResult> {
   const founder = await requireFounder();
   const name = str(fd, "name", 120);
-  const email = str(fd, "email", 200).toLowerCase();
+  const username = str(fd, "username", 40).toLowerCase().replace(/@.*$/, "");
   const role = str(fd, "role");
   const teamId = str(fd, "teamId") || null;
-  const password = String(fd.get("password") ?? "");
 
   if (!name) return { error: "Enter the person's full name." };
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return { error: "Enter a valid email address." };
+  if (!isValidUsername(username)) {
+    return { error: "Username can use lowercase letters, numbers and . _ - (for example tobi.adeyemi)." };
+  }
   if (!ROLES.includes(role)) return { error: "Choose a role." };
   if (role !== "FOUNDER" && !teamId) return { error: "Department Heads and Team Members must belong to a department or team." };
-  if (!id && password.length < 8) return { error: "Set a temporary password of at least 8 characters." };
-  if (id && password && password.length < 8) return { error: "New password must be at least 8 characters." };
+  if (teamId && !(await prisma.team.findUnique({ where: { id: teamId } }))) return { error: "That department no longer exists." };
 
   const active = fd.get("active") === "on";
   if (id === founder.id && (role !== "FOUNDER" || !active)) {
     return { error: "You can't remove your own Founder access or deactivate yourself." };
   }
 
+  const email = toEmail(username);
   const clash = await prisma.user.findUnique({ where: { email } });
-  if (clash && clash.id !== id) return { error: "Another account already uses this email." };
+  if (clash && clash.id !== id) return { error: `The username ${username} is already taken.` };
 
   const data = {
     name,
@@ -42,12 +43,28 @@ export async function saveUser(id: string | null, _prev: ActionResult, fd: FormD
     canViewFinance: fd.get("canViewFinance") === "on",
     canViewHR: fd.get("canViewHR") === "on",
     active,
-    ...(password ? { passwordHash: await bcrypt.hash(password, 10) } : {}),
   };
-  if (id) await prisma.user.update({ where: { id }, data });
-  else await prisma.user.create({ data: { ...data, passwordHash: data.passwordHash! } });
   revalidatePath("/", "layout");
-  redirect("/settings");
+  if (id) {
+    if (!(await prisma.user.findUnique({ where: { id } }))) return { error: "This account no longer exists." };
+    await prisma.user.update({ where: { id }, data });
+    redirect("/settings");
+  }
+  // New accounts have no password: the person chooses one with the setup code.
+  const created = await prisma.user.create({ data });
+  const code = await issueSetupCode(created.id);
+  return { ok: `Account created for ${name}.`, setupCode: { code, username, days: SETUP_CODE_DAYS } };
+}
+
+/** Forgot password / never received the code: issue a fresh setup code. The old password stops working. */
+export async function resetUserPassword(id: string): Promise<ActionResult> {
+  await requireFounder();
+  const user = await prisma.user.findUnique({ where: { id } });
+  if (!user) return { error: "This account no longer exists." };
+  if (!user.active) return { error: "Reactivate the account before resetting its password." };
+  const code = await issueSetupCode(user.id);
+  revalidatePath("/settings");
+  return { ok: `Password reset for ${user.name}. Their old password no longer works.`, setupCode: { code, username: usernameOf(user.email), days: SETUP_CODE_DAYS } };
 }
 
 export async function saveTeam(id: string | null, _prev: ActionResult, fd: FormData): Promise<ActionResult> {

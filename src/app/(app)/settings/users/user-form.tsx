@@ -1,5 +1,6 @@
 import type { Team, User } from "@prisma/client";
 import { ROLE_LABELS } from "@/lib/permissions";
+import { EMAIL_DOMAIN, usernameOf } from "@/lib/accounts";
 import { Field } from "@/components/ui";
 import { ActionForm, SubmitButton } from "@/components/forms";
 import { saveUser } from "../actions";
@@ -11,8 +12,21 @@ export function UserForm({ user, teams }: { user?: User; teams: Team[] }) {
         <Field label="Full name" htmlFor="name">
           <input id="name" name="name" defaultValue={user?.name} required className="input" />
         </Field>
-        <Field label="Work email" htmlFor="email">
-          <input id="email" name="email" type="email" defaultValue={user?.email} required className="input" />
+        <Field label="Username" htmlFor="username" hint="They sign in with this. e.g. tobi.adeyemi">
+          <div className="flex items-stretch">
+            <input
+              id="username"
+              name="username"
+              defaultValue={user ? usernameOf(user.email) : ""}
+              required
+              autoComplete="off"
+              spellCheck={false}
+              pattern="[a-z0-9]+([._\-][a-z0-9]+)*"
+              title="Lowercase letters, numbers and . _ -"
+              className="input rounded-r-none lowercase"
+            />
+            <span className="inline-flex items-center rounded-r-lg border border-l-0 border-line bg-cream px-2.5 text-sm text-muted">@{EMAIL_DOMAIN}</span>
+          </div>
         </Field>
         <Field label="Role" htmlFor="role">
           <select id="role" name="role" defaultValue={user?.role ?? "MEMBER"} className="input">
@@ -47,9 +61,11 @@ export function UserForm({ user, teams }: { user?: User; teams: Team[] }) {
         </label>
       </fieldset>
 
-      <Field label={user ? "Reset password" : "Temporary password"} htmlFor="password" hint={user ? "Leave blank to keep the current password." : "At least 8 characters. Ask them to change it after signing in."}>
-        <input id="password" name="password" type="text" autoComplete="new-password" minLength={8} required={!user} className="input font-mono" />
-      </Field>
+      {!user && (
+        <p className="rounded-lg bg-cream px-3 py-2 text-sm text-muted">
+          You don&apos;t set a password. After you create the account you&apos;ll get a one-time <strong>setup code</strong> to give them, and they choose their own password.
+        </p>
+      )}
 
       <label className="flex items-center gap-2 text-sm">
         <input type="checkbox" name="active" defaultChecked={user?.active ?? true} className="h-4 w-4" /> Account active (inactive accounts can&apos;t sign in; their history is kept)

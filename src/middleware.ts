@@ -1,11 +1,14 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { SESSION_COOKIE, SESSION_COOKIE_OPTIONS, signSession, verifySession } from "@/lib/session";
 
+/** Pages reachable while signed out: sign in, first-time setup / reset with a code, forgot password. */
+const PUBLIC_PATHS = ["/login", "/setup", "/forgot-password"];
+
 // Coarse gate: unauthenticated visitors are sent to /login. Fine-grained role checks
 // happen in each page and server action.
 export async function middleware(req: NextRequest) {
   const session = await verifySession(req.cookies.get(SESSION_COOKIE)?.value);
-  const isLogin = req.nextUrl.pathname === "/login";
+  const isLogin = PUBLIC_PATHS.includes(req.nextUrl.pathname);
 
   if (!session) {
     if (isLogin) return NextResponse.next();

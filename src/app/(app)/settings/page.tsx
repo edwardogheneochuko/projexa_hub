@@ -4,6 +4,8 @@ import { prisma } from "@/lib/db";
 import { requireFounder } from "@/lib/auth";
 import { ROLE_LABELS, type Role } from "@/lib/permissions";
 import { sp, type SearchParams } from "@/lib/utils";
+import { usernameOf } from "@/lib/accounts";
+import { formatDate } from "@/lib/periods";
 import { Badge, Card, FilterBar, FilterSelect, PageHeader, TableWrap } from "@/components/ui";
 import { ActionForm, SubmitButton } from "@/components/forms";
 import { saveTeam } from "./actions";
@@ -23,6 +25,10 @@ export default async function SettingsPage({ searchParams }: { searchParams: Sea
     }),
     prisma.team.findMany({ orderBy: { sortOrder: "asc" }, include: { _count: { select: { members: true } } } }),
   ]);
+  const resetRequests = await prisma.user.findMany({
+    where: { resetRequestedAt: { not: null }, active: true },
+    orderBy: { resetRequestedAt: "asc" },
+  });
 
   return (
     <>
@@ -31,6 +37,20 @@ export default async function SettingsPage({ searchParams }: { searchParams: Sea
         description="Manage accounts, roles, departments and access to confidential Finance and HR information. Confidential access is never granted automatically by department."
         actions={<Link href="/settings/users/new" className="btn-primary">Add person</Link>}
       />
+      {resetRequests.length > 0 && (
+        <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 p-4">
+          <p className="font-semibold text-amber-900">Password reset requests</p>
+          <ul className="mt-2 space-y-1 text-sm">
+            {resetRequests.map((u) => (
+              <li key={u.id} className="flex flex-wrap items-center gap-x-2">
+                <span className="font-medium">{u.name}</span>
+                <span className="text-muted">({usernameOf(u.email)}) asked {formatDate(u.resetRequestedAt!)}</span>
+                <Link href={`/settings/users/${u.id}`} className="link">Reset password →</Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
       <FilterBar resetHref="/settings">
         <FilterSelect name="team" label="Department / team" value={teamId} allLabel="All" options={teams.map((t) => ({ value: t.id, label: t.name }))} />
         <FilterSelect name="inactive" label="Show" value={showInactive ? "1" : ""} allLabel="Active accounts" options={[{ value: "1", label: "Active and inactive" }]} />
@@ -39,7 +59,8 @@ export default async function SettingsPage({ searchParams }: { searchParams: Sea
         <thead className="border-b border-line bg-cream/60">
           <tr>
             <th className="th">Name</th>
-            <th className="th">Email</th>
+            <th className="th">Username</th>
+            <th className="th">Sign-in</th>
             <th className="th">Role</th>
             <th className="th">Department / team</th>
             <th className="th">Confidential access</th>
@@ -53,7 +74,10 @@ export default async function SettingsPage({ searchParams }: { searchParams: Sea
                 {u.name} {!u.active && <Badge tone="bad">Inactive</Badge>}
                 <p className="text-xs font-normal text-muted">{u.position}</p>
               </td>
-              <td className="td text-muted">{u.email}</td>
+              <td className="td font-mono text-xs text-muted">{u.email}</td>
+              <td className="td">
+                {u.resetRequestedAt ? <Badge tone="warn">Reset requested</Badge> : u.passwordHash ? <Badge tone="good">Active</Badge> : <Badge tone="neutral">Not set up</Badge>}
+              </td>
               <td className="td">{ROLE_LABELS[u.role as Role]}</td>
               <td className="td">{u.team?.name ?? "—"}</td>
               <td className="td">

@@ -30,6 +30,21 @@ export function ActionForm({
           {state.ok}
         </p>
       )}
+      {state?.setupCode && (
+        <div role="status" className="rounded-lg border border-accent bg-accent-soft p-4 text-sm">
+          <p className="font-semibold text-brand">Give these details to the person:</p>
+          <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1">
+            <dt className="text-muted">Username</dt>
+            <dd className="font-mono font-semibold">{state.setupCode.username}</dd>
+            <dt className="text-muted">Setup code</dt>
+            <dd className="font-mono text-lg font-bold tracking-widest">{state.setupCode.code}</dd>
+          </dl>
+          <p className="mt-2 text-xs text-muted">
+            They go to the sign-in page, choose <strong>First time here? / Reset password</strong>, enter both and pick their own password.
+            The code works once and expires in {state.setupCode.days} days. It won&apos;t be shown again — if it&apos;s lost, generate a new one.
+          </p>
+        </div>
+      )}
       {children}
     </form>
   );

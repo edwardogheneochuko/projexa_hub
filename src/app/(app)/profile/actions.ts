@@ -36,7 +36,7 @@ export async function changePassword(_prev: ActionResult, fd: FormData): Promise
   const next = String(fd.get("next") ?? "");
   if (next.length < 8) return { error: "New password must be at least 8 characters." };
   if (next !== String(fd.get("confirm") ?? "")) return { error: "New passwords don't match." };
-  if (!(await bcrypt.compare(current, user.passwordHash))) return { error: "Current password is incorrect." };
-  await prisma.user.update({ where: { id: user.id }, data: { passwordHash: await bcrypt.hash(next, 10) } });
+  if (!user.passwordHash || !(await bcrypt.compare(current, user.passwordHash))) return { error: "Current password is incorrect." };
+  await prisma.user.update({ where: { id: user.id }, data: { passwordHash: await bcrypt.hash(next, 10), resetRequestedAt: null } });
   return { ok: "Password changed." };
 }

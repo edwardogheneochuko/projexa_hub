@@ -61,7 +61,7 @@ async function main() {
 
   const founder = await prisma.user.create({
     data: {
-      name: "Demo Founder", email: "founder@projexahub.test", passwordHash: hash, role: "FOUNDER", position: "Founder",
+      name: "Demo Founder", email: "founder@projexahub.com", passwordHash: hash, role: "FOUNDER", position: "Founder",
       bio: "Leads Projexa Hub's vision and strategy.", canViewFinance: true, canViewHR: true,
     },
   });
@@ -70,7 +70,7 @@ async function main() {
   for (const [slug, list] of Object.entries(PEOPLE)) {
     for (const [i, [name, position]] of list.entries()) {
       const role = i === 0 ? "HEAD" : "MEMBER";
-      const email = `${name.split(" ")[0].toLowerCase()}.${name.split(" ")[1].toLowerCase()}@projexahub.test`;
+      const email = `${name.split(" ")[0].toLowerCase()}.${name.split(" ")[1].toLowerCase()}@projexahub.com`;
       const u = await prisma.user.create({
         data: {
           name, email, passwordHash: hash, role, position, teamId: teamBySlug[slug].id,
@@ -219,9 +219,9 @@ async function main() {
   await hq("technology", "issues", { title: "Mobile menu overlaps header on small screens", type: "Bug", severity: "Low", reported: d(-3), status: "Open" }, head("technology"));
 
   console.log(`\nDone. Sign in with any demo account using password: ${DEMO_PASSWORD}`);
-  console.log("  Founder:          founder@projexahub.test");
-  console.log("  Department Head:  adaeze.okafor@projexahub.test  (Marketing)");
-  console.log("  Team Member:      tobi.adeyemi@projexahub.test   (Marketing)");
+  console.log("  Founder:          founder@projexahub.com");
+  console.log("  Department Head:  adaeze.okafor@projexahub.com  (Marketing)");
+  console.log("  Team Member:      tobi.adeyemi@projexahub.com   (Marketing)");
 }
 
 main()

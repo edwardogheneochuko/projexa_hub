@@ -33,8 +33,16 @@ model Team {
 
 model User {
   id           String  @id @default(cuid())
+  /// Always <username>@projexahub.com for accounts created in Settings.
   email        String  @unique
-  passwordHash String
+  /// Null until the person sets their own password with a setup code.
+  passwordHash String?
+  /// One-time setup code (bcrypt hash) issued by the Founder for first sign-in or a password reset.
+  setupCodeHash      String?
+  setupCodeExpiresAt DateTime?
+  setupCodeAttempts  Int       @default(0)
+  /// Set when the person asks for a password reset; cleared when a new setup code is used.
+  resetRequestedAt   DateTime?
   name         String
   /// FOUNDER | HEAD | MEMBER
   role         String  @default("MEMBER")
