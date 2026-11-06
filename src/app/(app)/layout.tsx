@@ -11,11 +11,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const groups: NavGroup[] = [
     {
       label: "Start",
-      items: [
-        { href: "/", label: "Home", exact: true },
-        { href: "/welcome/analytics", label: "Analytics sections" },
-        { href: "/welcome/center", label: "Projexa Hub Center" },
-      ],
+      items: [{ href: "/", label: "Home", exact: true }],
     },
     {
       label: "Analytics",
@@ -49,7 +45,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   return (
     <div className="min-h-screen">
       <AppNav groups={groups} logout={logout} user={{ name: user.name, roleLabel: ROLE_LABELS[user.role as Role], team: user.team?.name ?? "" }} />
-      <main className="px-4 py-6 sm:px-6 lg:ml-60 lg:px-8 lg:py-8">
+      <main className="px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
         <div className="mx-auto max-w-7xl">{children}</div>
       </main>
     </div>
