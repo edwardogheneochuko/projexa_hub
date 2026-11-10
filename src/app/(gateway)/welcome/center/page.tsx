@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { requireUser } from "@/lib/auth";
-import { isFounder } from "@/lib/permissions";
+import { isFounder, isHead } from "@/lib/permissions";
 import { AccessCard, Gateway } from "@/components/gateway";
 
 export const metadata: Metadata = { title: "Projexa Hub Center" };
@@ -9,8 +9,8 @@ export default async function CenterSelectionPage() {
   const user = await requireUser();
   const founder = isFounder(user);
 
-  // Founders see the all-teams comparison; heads see their department; members see their own performance.
-  const teamHref = founder ? "/analytics/teams" : user.teamId ? "/analytics" : null;
+  // Founder: team reviews across all departments. Head: their department's overview. Member: their own performance.
+  const teamHref = founder ? "/dashboard/reviews" : isHead(user) ? "/dashboard" : user.teamId ? "/analytics" : null;
 
   return (
     <Gateway
@@ -25,7 +25,7 @@ export default async function CenterSelectionPage() {
           title="Founders Dashboard"
           description="View overall team performance, weekly and monthly evaluations, and organizational activity report."
           notice="Restricted to authorized founders"
-          action={founder ? { href: "/analytics", label: "Open Founders Dashboard" } : null}
+          action={founder ? { href: "/dashboard", label: "Open Founders Dashboard" } : null}
         />
         <AccessCard
           title="Team Dashboard"
