@@ -1,6 +1,7 @@
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { ROLE_LABELS, type Role, isFounder, isHead, managedTeamIds } from "@/lib/permissions";
+import { liveTeamSlugs, visibleSpaces } from "@/lib/hq";
 import { AppShell, type NavGroup, type NavItem } from "@/components/nav";
 import { logout } from "../auth-actions";
 
@@ -8,6 +9,13 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const user = await requireUser();
   const founder = isFounder(user);
   const leader = founder || isHead(user);
+
+  // Alumni and Campus Structure sections (PRD §4.3–4.4), for whoever can use that HQ workspace.
+  const spaces = visibleSpaces(user, await liveTeamSlugs()).map((s) => s.key);
+  const sections: NavItem[] = [
+    ...(spaces.includes("alumni") ? [{ href: "/alumni", label: "Alumni", icon: "directory" } satisfies NavItem] : []),
+    ...(spaces.includes("campus") ? [{ href: "/campus", label: "Campus Structure", icon: "home" } satisfies NavItem] : []),
+  ];
 
   // Main navigation follows the Figma dashboards. Day-to-day tools stay reachable under "Tools".
   const main: NavGroup[] = [
@@ -24,6 +32,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             { href: "/analytics/evaluations", label: "My Evaluations", icon: "reviews" },
           ],
     },
+    ...(sections.length ? [{ label: "Analytics sections", items: sections }] : []),
     {
       label: "Tools",
       items: [

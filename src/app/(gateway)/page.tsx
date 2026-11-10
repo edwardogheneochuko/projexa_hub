@@ -1,13 +1,13 @@
 import type { Metadata } from "next";
 import { requireUser } from "@/lib/auth";
-import { visibleSpaces } from "@/lib/hq";
+import { liveTeamSlugs, visibleSpaces } from "@/lib/hq";
 import { Gateway, TiltCard } from "@/components/gateway";
 
 export const metadata: Metadata = { title: "Welcome" };
 
 export default async function WelcomePage() {
   const user = await requireUser();
-  const hasHq = visibleSpaces(user).length > 0;
+  const hasHq = visibleSpaces(user, await liveTeamSlugs()).length > 0;
 
   return (
     <Gateway

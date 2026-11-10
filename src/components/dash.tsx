@@ -47,7 +47,7 @@ export function StatCard({ label, value, note }: { label: string; value: React.R
 
 export function Panel({ title, actions, children, className }: { title: React.ReactNode; actions?: React.ReactNode; children: React.ReactNode; className?: string }) {
   return (
-    <section className={cn("rounded-2xl bg-white p-4 sm:p-6", className)}>
+    <section className={cn("min-w-0 rounded-2xl bg-white p-4 sm:p-6", className)}>
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <h2 className="font-display text-lg font-medium tracking-wide text-black sm:text-xl">{title}</h2>
         {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}

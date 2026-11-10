@@ -1,3 +1,5 @@
+import { cache } from "react";
+import { prisma } from "./db";
 import type { Section, Space, Field } from "./hq-config";
 import { SPACES } from "./hq-config";
 import { hasConfidentialAccess, isFounder } from "./permissions";
@@ -30,8 +32,16 @@ export function visibleSections(u: CurrentUser, space: Space) {
   return space.sections.filter((s) => canViewSection(u, space, s));
 }
 
-export function visibleSpaces(u: CurrentUser) {
-  return SPACES.filter((sp) => visibleSections(u, sp).length > 0);
+/** Slugs of the departments that currently exist. Cached per request. */
+export const liveTeamSlugs = cache(async () => new Set((await prisma.team.findMany({ select: { slug: true } })).map((t) => t.slug)));
+
+/** Founders HQ always exists; a department workspace only while that department exists (PRD §5.5). */
+export function isLiveSpace(space: Space, slugs: Set<string>) {
+  return space.teamSlug === null || slugs.has(space.teamSlug);
+}
+
+export function visibleSpaces(u: CurrentUser, slugs: Set<string>) {
+  return SPACES.filter((sp) => isLiveSpace(sp, slugs) && visibleSections(u, sp).length > 0);
 }
 
 export type RecordData = Record<string, string>;

@@ -1,4 +1,7 @@
-// Projexa Hub HQ — fixed, department-specific table structures (PRD §6, §14).
+// Projexa Hub HQ — fixed, department-specific table structures (PRD §5).
+// Founders HQ, Marketing and Content & Copywriting follow PRD §5.2–5.4 field for field.
+// Other departments are "to be confirmed" (PRD §5.5): their workspaces below only appear once
+// the Founder creates a department with the matching slug in Settings (see liveTeamSlugs in hq.ts).
 // This is intentionally NOT a user-editable database builder: developers add or change
 // sections here. Records store external links only — no file uploads.
 import type { Confidential } from "./permissions";
@@ -58,6 +61,12 @@ const select = (key: string, label: string, options: string[], column = true, re
 const period = (): Field => ({ key: "period", label: "Period", type: "text", column: true, hint: "e.g. 2026, Q4 2026, November 2026" });
 const summary = (): Field => ({ key: "summary", label: "Summary", type: "longtext" });
 
+const person = (label: string, hint?: string, column = true): Field => ({ key: "person", label, type: "text", column, hint });
+const timeline = (label: string, hint = "e.g. Jan – Mar 2027"): Field => ({ key: "timeline", label, type: "text", column: true, hint });
+
+const QUARTERS = ["Q1", "Q2", "Q3", "Q4"];
+const PLATFORMS = ["Instagram", "X (Twitter)", "LinkedIn", "Facebook", "TikTok", "YouTube", "WhatsApp", "Website", "Email", "Other"];
+const FORMATS = ["Post", "Carousel", "Reel / Video", "Story", "Article", "Newsletter", "Other"];
 const PLAN_STATUS = ["Draft", "Active", "Completed", "Archived"];
 
 const plansSection = (key: string, titleText: string, description: string, extra: Field[] = []): Section => ({
@@ -81,71 +90,152 @@ const docsSection = (key: string, titleText: string, description: string, catego
 export const SPACES: Space[] = [
   {
     key: "founder",
-    title: "Founder HQ",
-    description: "Organisational overview, goals, planning, records and leadership resources.",
+    title: "Founders HQ",
+    description: "An informational view of organisational plans and relevant resources (PRD §5.2).",
     teamSlug: null,
     sections: [
       {
-        key: "overview", title: "Organisational overview", description: "Mission, vision, values and structure.",
-        fields: [title(), select("category", "Category", ["Mission", "Vision", "Values", "Structure", "History", "Other"]), { key: "content", label: "Content", type: "longtext" }, link()],
+        key: "annual-planning", title: "Annual Planning", description: "The annual plan, structured by quarters.",
+        fields: [
+          select("quarter", "Quarter", QUARTERS, true, true),
+          { key: "year", label: "Year", type: "text", column: true, required: true, hint: "e.g. 2027" },
+          { key: "title", label: "Strategic Objective", type: "text", required: true, column: true },
+          { key: "initiatives", label: "Key Initiatives", type: "longtext", hint: "Major activities or projects." },
+          person("Responsible Person", "Assigned owner."),
+          timeline("Timeline", "Expected implementation period, e.g. Jan – Mar 2027."),
+          select("status", "Status", ["Not Started", "In Progress", "Completed"], true, true),
+          link("Reference Links", false),
+        ],
+        statusField: "status", filterField: "quarter",
+      },
+      {
+        key: "reference-library", title: "Reference Library", description: "Links to company resources, documents, platforms and external references.",
+        fields: [
+          { key: "title", label: "Resource Name", type: "text", required: true, column: true },
+          select("category", "Category", ["Document", "Platform", "Policy", "Template", "Guide", "External reference", "Other"], true, true),
+          { key: "description", label: "Description", type: "longtext" },
+          { ...link("Link"), required: true },
+          person("Responsible Person"),
+          { key: "dateAdded", label: "Date Added", type: "date", column: true, required: true },
+        ],
         filterField: "category",
       },
       {
-        key: "goals", title: "Organisational goals", description: "What the organisation is working towards.",
-        fields: [title("Goal"), select("horizon", "Horizon", ["Annual", "Quarterly", "Monthly"]), period(), select("status", "Status", ["Not started", "In progress", "Achieved", "Deferred"]), { key: "measure", label: "How success is measured", type: "longtext" }, link("Supporting link", false)],
-        statusField: "status", filterField: "horizon",
-      },
-      plansSection("annual", "Annual planning", "Year-level plans and priorities."),
-      plansSection("quarterly", "Quarterly planning", "Quarter-level plans."),
-      plansSection("monthly", "Monthly planning", "Month-level plans and scheduled organisational activities."),
-      {
-        key: "records", title: "Organisational records", description: "Registration, legal, governance and meeting records.",
-        fields: [title(), select("category", "Category", ["Registration", "Legal", "Governance", "Policy", "Meeting minutes", "Other"]), date(), { key: "reference", label: "Reference", type: "text", column: true }, link(), notes()],
-        filterField: "category",
-      },
-      {
+        // Not listed in PRD §5.2, kept for the PRD objective "a centralized HR and departmental information hub".
         key: "hr", title: "HR & onboarding", description: "Confidential HR and onboarding documentation.", confidential: "hr",
         fields: [title(), select("category", "Category", ["Onboarding", "Policy", "Contract", "Personnel record", "Offboarding", "Other"]), { key: "person", label: "Person (if applicable)", type: "text", column: true }, date(), link(), notes()],
         filterField: "category",
       },
-      docsSection("leadership", "Leadership resources", "Resources for the leadership team.", ["Guide", "Template", "Training", "Reference", "Other"]),
     ],
   },
   {
     key: "marketing",
     title: "Marketing",
-    description: "Social media, creative, brand, content, strategy and product roadmap.",
+    description: "Social media plans, content calendar, creative plans and video plans (PRD §5.3).",
     teamSlug: "marketing",
     sections: [
       {
-        key: "social-media", title: "Social media", description: "Plans, content calendar, platform records, performance links and campaigns.",
-        fields: [title(), select("category", "Type", ["Social media plan", "Content calendar entry", "Platform record", "Performance link", "Campaign record"], true, true), select("platform", "Platform", ["Instagram", "X (Twitter)", "LinkedIn", "Facebook", "TikTok", "YouTube", "WhatsApp", "Other"]), date("date", "Date"), select("status", "Status", ["Planned", "Scheduled", "Published", "Completed", "Archived"]), link(), notes()],
-        statusField: "status", filterField: "category", calendarField: "date",
+        key: "social-media-plans", title: "Social Media Plans", description: "Campaigns and objectives per platform.",
+        fields: [
+          { key: "title", label: "Campaign or objective", type: "text", required: true, column: true },
+          select("platform", "Platform", PLATFORMS, true, true),
+          { key: "direction", label: "Content direction", type: "longtext" },
+          { key: "audience", label: "Target audience", type: "text" },
+          person("Responsible person"),
+          timeline("Timeline"),
+          select("status", "Status", ["Not Started", "In Progress", "Completed"], true, true),
+          link("Reference links", false),
+        ],
+        statusField: "status", filterField: "platform",
       },
       {
-        key: "creative", title: "Creative", description: "Creative plans, design records, campaign documentation and design-resource links.",
-        fields: [title(), select("category", "Type", ["Creative plan", "Design record", "Campaign documentation", "Design-resource link"], true, true), date(), select("status", "Status", ["Planned", "In progress", "Final", "Archived"]), link(), notes()],
-        statusField: "status", filterField: "category", calendarField: "date",
+        key: "content-calendar", title: "Content Calendar", description: "What is being published, where and when.",
+        fields: [
+          { key: "title", label: "Content title", type: "text", required: true, column: true },
+          { key: "pillar", label: "Content pillar", type: "text" },
+          select("platform", "Platform", PLATFORMS, true, true),
+          select("format", "Content format", FORMATS, true),
+          { key: "publicationDate", label: "Publication date", type: "date", column: true, required: true },
+          person("Responsible person", undefined, false),
+          select("status", "Status", ["Planned", "Scheduled", "Published"], true, true),
+          link("Content link", false),
+        ],
+        statusField: "status", filterField: "platform", calendarField: "publicationDate",
       },
       {
-        key: "brand", title: "Brand design", description: "Brand guidelines, assets, design standards and documentation.",
-        fields: [title(), select("category", "Type", ["Brand guideline", "Brand asset / resource link", "Design standard", "Brand documentation"], true, true), { key: "version", label: "Version", type: "text", column: true }, link(), notes()],
-        filterField: "category",
+        key: "creative-plans", title: "Creative Plans", description: "Design work: what, why, who and when.",
+        fields: [
+          { key: "title", label: "Creative project", type: "text", required: true, column: true },
+          select("designType", "Design type", ["Social media graphic", "Flyer", "Banner", "Brand asset", "Presentation", "Other"], true),
+          { key: "objective", label: "Objective", type: "longtext" },
+          person("Assigned designer"),
+          { key: "deadline", label: "Deadline", type: "date", column: true },
+          select("status", "Status", ["Not Started", "In Progress", "In Review", "Completed"], true, true),
+          link("Reference link", false),
+        ],
+        statusField: "status", filterField: "designType", calendarField: "deadline",
       },
       {
-        key: "content", title: "Content & copywriting", description: "Content plans, copywriting records, content calendar and resource links.",
-        fields: [title(), select("category", "Type", ["Content plan", "Copywriting record", "Content calendar entry", "Content-resource link"], true, true), { key: "channel", label: "Channel", type: "text", column: true }, date(), select("status", "Status", ["Idea", "Drafting", "Ready", "Published"]), link(), notes()],
-        statusField: "status", filterField: "category", calendarField: "date",
+        key: "video-plans", title: "Video Plans", description: "Video projects from idea to publication.",
+        fields: [
+          { key: "title", label: "Video title or project", type: "text", required: true, column: true },
+          select("videoType", "Video type", ["Promo", "Tutorial", "Event coverage", "Interview", "Short-form", "Other"], true),
+          { key: "objective", label: "Objective", type: "longtext" },
+          person("Assigned video editor"),
+          timeline("Production timeline"),
+          select("status", "Status", ["Planned", "In Production", "Editing", "Published"], true, true),
+          link("Video link", false),
+        ],
+        statusField: "status", filterField: "videoType",
+      },
+    ],
+  },
+  {
+    key: "content",
+    title: "Content & Copywriting",
+    description: "Planned content, deadlines, assignments and completed work (PRD §5.4).",
+    teamSlug: "content-copywriting",
+    sections: [
+      {
+        key: "content-plans", title: "Content Plans", description: "Content projects and topics.",
+        fields: [
+          { key: "title", label: "Content project or topic", type: "text", required: true, column: true },
+          { key: "pillar", label: "Content pillar", type: "text", column: true },
+          { key: "objective", label: "Objective", type: "longtext" },
+          { key: "audience", label: "Target audience", type: "text" },
+          person("Assigned writer"),
+          { key: "deadline", label: "Deadline", type: "date", column: true },
+          select("status", "Status", ["Not Started", "In Progress", "Completed"], true, true),
+          link("Reference links", false),
+        ],
+        statusField: "status", calendarField: "deadline",
       },
       {
-        key: "strategy", title: "Marketing strategy", description: "Marketing plans, campaign strategies, reports and research links.",
-        fields: [title(), select("category", "Type", ["Marketing plan", "Campaign strategy", "Marketing report", "Performance / research link"], true, true), period(), summary(), link()],
-        filterField: "category",
+        key: "content-calendar", title: "Content Calendar", description: "What is being published, where and when.",
+        fields: [
+          { key: "title", label: "Content title", type: "text", required: true, column: true },
+          select("platform", "Platform", PLATFORMS, true, true),
+          select("format", "Content format", FORMATS, true),
+          { key: "publicationDate", label: "Publication date", type: "date", column: true, required: true },
+          person("Assigned writer"),
+          select("status", "Status", ["Planned", "Drafting", "Published"], true, true),
+          link("Published link", false),
+        ],
+        statusField: "status", filterField: "platform", calendarField: "publicationDate",
       },
       {
-        key: "product-roadmap", title: "Product roadmap", description: "Product plans, development priorities, documentation and progress records.",
-        fields: [title(), select("category", "Type", ["Product plan", "Development priority", "Product documentation", "Progress record"], true, true), select("priority", "Priority", ["High", "Medium", "Low"]), { key: "quarter", label: "Target quarter", type: "text", column: true, hint: "e.g. Q1 2027" }, select("status", "Status", ["Planned", "In progress", "Released", "Paused"]), link(), notes()],
-        statusField: "status", filterField: "category",
+        key: "copywriting", title: "Copywriting Tracker", description: "Copy from brief to approved final.",
+        fields: [
+          { key: "title", label: "Copy title or project", type: "text", required: true, column: true },
+          select("copyType", "Copy type", ["Ad copy", "Caption", "Email", "Website copy", "Script", "Press release", "Other"], true),
+          { key: "platform", label: "Intended platform", type: "text" },
+          { key: "objective", label: "Objective", type: "longtext" },
+          person("Assigned copywriter"),
+          { key: "deadline", label: "Deadline", type: "date", column: true },
+          select("status", "Review status", ["Draft", "In Review", "Revisions Needed", "Approved"], true, true),
+          link("Final copy / document link", false),
+        ],
+        statusField: "status", filterField: "copyType", calendarField: "deadline",
       },
     ],
   },
@@ -275,8 +365,8 @@ export const SPACES: Space[] = [
   },
   {
     key: "campus",
-    title: "Campus",
-    description: "Campus Chapter directory, members, plans, activities, resources and development. Internal Campus Chapter team performance lives in Analytics.",
+    title: "Campus Structure",
+    description: "Campus chapter directory, leadership and members, plans, activities, resources and development. Internal Campus Structure team performance lives in Analytics.",
     teamSlug: "campus-chapter",
     sections: [
       {

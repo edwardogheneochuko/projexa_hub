@@ -1,28 +1,16 @@
 import type { Metadata } from "next";
-import { prisma } from "@/lib/db";
-import { requireUser, type CurrentUser } from "@/lib/auth";
-import { visibleSpaces } from "@/lib/hq";
-import { canViewTeamAnalytics } from "@/lib/permissions";
+import { requireUser } from "@/lib/auth";
+import { liveTeamSlugs, visibleSpaces } from "@/lib/hq";
 import { Gateway, SectionCard } from "@/components/gateway";
 
 export const metadata: Metadata = { title: "Projexa Hub Analytics" };
 
-/**
- * Where the Alumni / Campus card's Next button leads for this user:
- * leaders of that team (and the Founder) go to its analytics, members to their own dashboard,
- * and anyone else with the HQ workspace goes there. Otherwise the card is locked.
- */
-function destination(user: CurrentUser, team: { id: string; slug: string } | undefined, hqKey: string) {
-  if (team && canViewTeamAnalytics(user, team.id)) return `/analytics/teams/${team.slug}`;
-  if (team && user.teamId === team.id) return "/analytics";
-  return visibleSpaces(user).some((s) => s.key === hqKey) ? `/hq/${hqKey}` : null;
-}
-
 export default async function AnalyticsSelectionPage() {
   const user = await requireUser();
-  const teams = await prisma.team.findMany({ where: { slug: { in: ["alumni", "campus-chapter"] } }, select: { id: true, slug: true } });
-  const alumni = destination(user, teams.find((t) => t.slug === "alumni"), "alumni");
-  const campus = destination(user, teams.find((t) => t.slug === "campus-chapter"), "campus");
+  // The Alumni and Campus Structure sections (PRD §4.3–4.4) are open to whoever can use that HQ workspace.
+  const spaces = visibleSpaces(user, await liveTeamSlugs()).map((s) => s.key);
+  const alumni = spaces.includes("alumni") ? "/alumni" : null;
+  const campus = spaces.includes("campus") ? "/campus" : null;
   const noAccess = "Restricted to the Founder and members of this team.";
   const next = (href: string | null) => (href ? { href, label: "Next" } : null);
 

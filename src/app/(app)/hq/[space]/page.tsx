@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
 import { getSpace, SPACES } from "@/lib/hq-config";
-import { parseData, visibleSections } from "@/lib/hq";
+import { parseData, visibleSections, isLiveSpace, liveTeamSlugs } from "@/lib/hq";
 import { formatDate } from "@/lib/periods";
 import { naira } from "@/lib/utils";
 import { Badge, Card, PageHeader, StatTile } from "@/components/ui";
@@ -36,7 +36,8 @@ async function FinanceSummary() {
 export default async function SpacePage({ params }: { params: Promise<{ space: string }> }) {
   const user = await requireUser();
   const space = getSpace((await params).space);
-  if (!space) notFound();
+  const slugs = await liveTeamSlugs();
+  if (!space || !isLiveSpace(space, slugs)) notFound();
   const sections = visibleSections(user, space);
   if (sections.length === 0) notFound();
 
@@ -74,7 +75,7 @@ export default async function SpacePage({ params }: { params: Promise<{ space: s
       {space.teamSlug === null && (
         <Card title="Departmental spaces" className="mt-6">
           <ul className="flex flex-wrap gap-2">
-            {SPACES.filter((s) => s.teamSlug !== null).map((s) => (
+            {SPACES.filter((s) => s.teamSlug !== null && isLiveSpace(s, slugs)).map((s) => (
               <li key={s.key}>
                 <Link href={`/hq/${s.key}`} className="btn-secondary">{s.title}</Link>
               </li>

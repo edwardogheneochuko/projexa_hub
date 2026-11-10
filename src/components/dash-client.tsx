@@ -65,6 +65,26 @@ export function ScoreColumns({ data }: { data: { label: string; value: number | 
   );
 }
 
+/** Plain counts per period (activities, participants), grey columns with value labels. */
+export function CountColumns({ data, unit, empty = "Nothing recorded in this period yet." }: { data: { label: string; value: number }[]; unit: string; empty?: string }) {
+  if (!data.some((d) => d.value > 0)) return <p className="py-16 text-center text-sm text-neutral-600">{empty}</p>;
+  return (
+    <div className="h-64 w-full sm:h-72">
+      <ResponsiveContainer width="100%" height="100%">
+        <BarChart data={data} margin={{ top: 24, right: 8, left: -16, bottom: 0 }}>
+          <CartesianGrid stroke="#ececec" strokeDasharray="2 4" vertical={false} />
+          <XAxis dataKey="label" tickLine={false} axisLine={{ stroke: "#bdbdbd" }} tick={{ fill: "#333", fontSize: 12 }} />
+          <YAxis allowDecimals={false} tickLine={false} axisLine={false} tick={{ fill: "#333", fontSize: 12 }} />
+          <Tooltip formatter={(v) => [v as number, unit]} cursor={{ fill: "#f5f5f5" }} />
+          <Bar dataKey="value" fill="#9e9e9e" radius={[4, 4, 0, 0]} maxBarSize={56} isAnimationActive={false}>
+            <LabelList dataKey="value" position="top" formatter={(v: unknown) => (typeof v === "number" && v > 0 ? v : "")} style={{ fill: "#333", fontSize: 12 }} />
+          </Bar>
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
+
 /** "Top 5 Performing Dept.": horizontal grey bars, 0–100. */
 export function DeptBars({ data }: { data: { name: string; value: number }[] }) {
   if (!data.length) return <p className="py-10 text-center text-sm text-neutral-600">No KPI results recorded yet.</p>;

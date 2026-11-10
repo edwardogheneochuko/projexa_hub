@@ -176,20 +176,16 @@ async function main() {
     prisma.hqRecord.create({ data: { space, section, data: JSON.stringify(data), updatedById: by } });
   const head = (slug: string) => members.find((m) => m.slug === slug && m.role === "HEAD")!.id;
 
-  await hq("founder", "overview", { title: "Mission", category: "Mission", content: "To connect ideas, people and projects that create lasting impact." });
-  await hq("founder", "overview", { title: "Core values", category: "Values", content: "Integrity, collaboration, excellence and service." });
-  await hq("founder", "goals", { title: "Grow active community to 2,000 members", horizon: "Annual", period: String(today.getFullYear()), status: "In progress" });
-  await hq("founder", "goals", { title: "Launch 5 new campus chapters", horizon: "Annual", period: String(today.getFullYear()), status: "In progress" });
-  await hq("founder", "quarterly", { title: "Q4 operating plan", period: `Q4 ${today.getFullYear()}`, status: "Active", startDate: d(-30), summary: "Focus on partnerships, alumni engagement and chapter growth.", link: "https://docs.google.com/document/d/example" });
-  await hq("founder", "monthly", { title: "Monthly all-hands", period: "This month", status: "Active", startDate: d(5), link: "https://docs.google.com/document/d/example" });
-  await hq("founder", "records", { title: "Business name registration", category: "Registration", reference: "BN 9573446", link: "https://drive.google.com/drive/folders/example" });
+  await hq("founder", "annual-planning", { quarter: "Q1", year: String(today.getFullYear() + 1), title: "Grow the active community to 2,000 members", initiatives: "Monthly meetups, referral drive, alumni mentorship.", person: "Demo Founder", timeline: "Jan – Mar", status: "Not Started" });
+  await hq("founder", "annual-planning", { quarter: "Q4", year: String(today.getFullYear()), title: "Launch 5 new campus chapters", initiatives: "Chapter toolkit, lead onboarding.", person: "Amaka Chukwu", timeline: "Oct – Dec", status: "In Progress", link: "https://docs.google.com/document/d/example" });
+  await hq("founder", "reference-library", { title: "Business name registration", category: "Document", description: "Registration certificate BN 9573446.", link: "https://drive.google.com/drive/folders/example", person: "Demo Founder", dateAdded: d(-30) });
   await hq("founder", "hr", { title: "Onboarding checklist", category: "Onboarding", link: "https://docs.google.com/document/d/example" });
 
-  await hq("marketing", "social-media", { title: "Weekly tips carousel", category: "Content calendar entry", platform: "Instagram", date: d(2), status: "Scheduled" }, head("marketing"));
-  await hq("marketing", "social-media", { title: "Partner spotlight", category: "Content calendar entry", platform: "LinkedIn", date: d(6), status: "Planned" }, head("marketing"));
-  await hq("marketing", "social-media", { title: "Q4 social media plan", category: "Social media plan", date: d(-20), status: "Published", link: "https://docs.google.com/document/d/example" }, head("marketing"));
-  await hq("marketing", "brand", { title: "Brand guidelines v2", category: "Brand guideline", version: "2.0", link: "https://drive.google.com/file/d/example" }, head("marketing"));
-  await hq("marketing", "product-roadmap", { title: "Member portal", category: "Product plan", priority: "High", quarter: `Q1 ${today.getFullYear() + 1}`, status: "Planned" }, head("marketing"));
+  await hq("marketing", "social-media-plans", { title: "Q4 awareness campaign", platform: "Instagram", direction: "Behind-the-scenes and member stories.", audience: "Students and young professionals", person: "Adaeze Okafor", timeline: "Oct – Dec ${today.getFullYear()}", status: "In Progress" }, head("marketing"));
+  await hq("marketing", "content-calendar", { title: "Weekly tips carousel", platform: "Instagram", format: "Carousel", publicationDate: d(2), person: "Tobi Adeyemi", status: "Scheduled" }, head("marketing"));
+  await hq("marketing", "content-calendar", { title: "Partner spotlight", platform: "LinkedIn", format: "Post", publicationDate: d(6), status: "Planned" }, head("marketing"));
+  await hq("marketing", "creative-plans", { title: "Event flyer — community meetup", designType: "Flyer", person: "Kemi Balogun", deadline: d(5), status: "In Progress" }, head("marketing"));
+  await hq("marketing", "video-plans", { title: "Member story reel", videoType: "Short-form", person: "Ifeanyi Eze", timeline: "2 weeks", status: "Planned" }, head("marketing"));
 
   await hq("sales-growth", "pipeline", { title: "Corporate training package", organisation: "Acme Learning Ltd", stage: "Proposal", value: "1500000", expectedClose: d(21) }, head("sales-growth"));
   await hq("sales-growth", "pipeline", { title: "Event sponsorship", organisation: "Bright Futures Foundation", stage: "Negotiation", value: "800000", expectedClose: d(10) }, head("sales-growth"));

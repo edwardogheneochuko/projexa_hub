@@ -2,14 +2,14 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
-import { visibleSections, visibleSpaces } from "@/lib/hq";
+import { liveTeamSlugs, visibleSections, visibleSpaces } from "@/lib/hq";
 import { Badge, EmptyState, PageHeader } from "@/components/ui";
 
 export const metadata: Metadata = { title: "HQ" };
 
 export default async function HqHome() {
   const user = await requireUser();
-  const spaces = visibleSpaces(user);
+  const spaces = visibleSpaces(user, await liveTeamSlugs());
   const counts = await prisma.hqRecord.groupBy({ by: ["space", "section"], _count: { _all: true } });
   const countFor = (space: string, sections: string[]) =>
     counts.filter((c) => c.space === space && sections.includes(c.section)).reduce((s, c) => s + c._count._all, 0);
