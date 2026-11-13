@@ -1,14 +1,15 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { SESSION_COOKIE, SESSION_COOKIE_OPTIONS, signSession, verifySession } from "@/lib/session";
 
-/** Pages reachable while signed out: sign in, first-time setup / reset with a code, forgot password. */
-const PUBLIC_PATHS = ["/login", "/setup", "/forgot-password"];
+/** Pages reachable while signed out: sign in, forgot password, links sent by email, and /join/<code> invitations. */
+const PUBLIC_PATHS = ["/login", "/forgot-password", "/invite", "/reset-password", "/verify-email"];
 
 // Coarse gate: unauthenticated visitors are sent to /login. Fine-grained role checks
 // happen in each page and server action.
 export async function middleware(req: NextRequest) {
   const session = await verifySession(req.cookies.get(SESSION_COOKIE)?.value);
-  const isLogin = PUBLIC_PATHS.includes(req.nextUrl.pathname);
+  const path = req.nextUrl.pathname;
+  const isLogin = PUBLIC_PATHS.includes(path) || path.startsWith("/join/");
 
   if (!session) {
     if (isLogin) return NextResponse.next();
@@ -22,7 +23,7 @@ export async function middleware(req: NextRequest) {
   const res = NextResponse.next();
   // Sliding idle timeout: activity keeps the sign-in alive; 30 idle minutes end it.
   if (session.needsRefresh && !isLogin) {
-    res.cookies.set(SESSION_COOKIE, await signSession(session.userId), SESSION_COOKIE_OPTIONS);
+    res.cookies.set(SESSION_COOKIE, await signSession(session.userId, session.sv), SESSION_COOKIE_OPTIONS);
   }
   return res;
 }

@@ -24,26 +24,29 @@ npm run dev          # http://localhost:3000
 
 ## Accounts and passwords
 
-Every account is `<username>@projexahub.com`. People sign in with just their username.
+Everyone signs in with a **username** (`<username>@projexahub.com`) and their own password. Each account also has the person’s **real, verified email** (e.g. Gmail), used only for sign-up verification and password resets.
 
-1. The Founder adds a person in **Settings & permissions → Add person**, choosing their username. No password is set.
-2. The app shows a one-time **setup code** (valid 7 days, 5 attempts). The Founder gives the username and code to the person.
-3. The person opens **First time here? / Reset password** on the sign-in page, enters both, and chooses their own password.
+**Joining (no codes):**
+1. The Founder opens **Settings → Team invitations**, picks a department (or lets the person choose) and a role, and generates a link. Links expire (1, 7 or 30 days), can be limited to a number of people, and can be switched off.
+2. The Founder shares the link with the team (e.g. on WhatsApp).
+3. Each person opens it and enters their full name, username, department, email and password.
+4. They receive a verification email and click it. Only then can they sign in.
 
-**Forgot password:** the person clicks **Forgot password?** and enters their username. The request appears at the top of Settings. The Founder clicks **Reset password**, which issues a new setup code (their old password stops working), and the person sets a new password as in step 3.
+**Forgot password:** anyone clicks **Forgot password?**, enters their username, and gets a reset link (valid 1 hour, single use) at their verified email. Resetting signs them out on other devices. Someone who never verified gets the verification email again.
 
-**The Founder's own account** (first set-up, or a forgotten Founder password) is handled from the command line by whoever manages the server:
+**Changing email:** in **My profile → Email** (password required). A confirmation link goes to the new address; the old one stays in use until it’s confirmed. The Founder can also change someone’s email from their Settings page.
+
+**Sending email** uses Gmail SMTP with an App Password. Set `GMAIL_USER`, `GMAIL_APP_PASSWORD` and `APP_URL` (the site address used in links). Without them, outside production, emails are saved to a local “outbox” folder instead of sent, for testing. *PRD §9 lists automated messaging as out of scope unless approved; account emails (verification and password reset only) were approved by the project owner in November 2026.*
+
+**Emergency links** (first Founder, or email not working), for whoever runs the server:
 
 ```bash
-npm run account:code -- <username> --create-founder "Full Name"   # create the first Founder
-npm run account:code -- <username>                                # new setup code for an existing account
+npm run account:link -- <username>                         # print a reset (or invite) link
+npm run account:link -- <username> --email <address>       # set/change their email (sends a confirmation)
+npm run account:link -- <username> --email <address> --create-founder "Full Name"
 ```
 
-This uses the database in `DATABASE_URL`, so point it at the production database when needed.
-
-Other scripts: `npm run build`, `npm run typecheck`, `npm run lint`.
-
----
+This uses the database in `DATABASE_URL` and links to `APP_URL` (default: the live site).
 
 ## Roles and permissions (PRD §8)
 
@@ -117,7 +120,7 @@ Every page and server action re-checks permissions on the server. The middleware
    - `AUTH_SECRET`: a new long random string (not the one from your local `.env`)
 4. Create the tables once, from your machine, against the production database: `DATABASE_URL="<production url>" npx prisma db push`
 5. Redeploy in Vercel so it picks up the variables.
-6. Create the real Founder account: `DATABASE_URL="<production url>" npm run account:code -- <username> --create-founder "Full Name"`, then sign in with the setup code and add everyone else in Settings.
+6. Create the real Founder account: `DATABASE_URL="<production url>" npm run account:link -- <username> --email <their email> --create-founder "Full Name"`, then add everyone else with Settings → Team invitations.
 
 There is no file storage, so there are no storage costs, and there are no per-user licence costs.
 
@@ -138,6 +141,6 @@ KPIs measure performance and are never used to assign tasks.
 
 ## Known limitations and next steps
 
-- Password resets go through the Founder (no email sending yet). Email-based reset could be added with an email provider.
+- Password resets are by email (Gmail App Password). If the mailbox is ever unavailable, use `npm run account:link`.
 - Exports are via "Print / save as PDF" on the Performance reports page. CSV export could be added.
 - Expected reports are based on current team membership, so they are not adjusted for people who joined or left part-way through a period.

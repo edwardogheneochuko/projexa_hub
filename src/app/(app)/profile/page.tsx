@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { requireUser } from "@/lib/auth";
 import { ROLE_LABELS, type Role } from "@/lib/permissions";
-import { Avatar, Card, Field, PageHeader } from "@/components/ui";
+import { Avatar, Badge, Card, Field, PageHeader } from "@/components/ui";
 import { ActionForm, SubmitButton } from "@/components/forms";
-import { changePassword, updateProfile } from "./actions";
+import { changePassword, requestEmailChange, updateProfile } from "./actions";
 
 export const metadata: Metadata = { title: "My profile" };
 
@@ -14,7 +14,7 @@ export default async function MyProfilePage() {
     <>
       <PageHeader
         title="My profile"
-        description="How you appear in the team directory. Name, email, department and position are managed by the Founder."
+        description="How you appear in the team directory, your email and your password. Name, department and position are managed by the Founder."
         actions={<Link href={`/directory/${u.id}`} className="btn-secondary">View public profile</Link>}
       />
       <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
@@ -54,6 +54,30 @@ export default async function MyProfilePage() {
             <SubmitButton>Save profile</SubmitButton>
           </ActionForm>
         </Card>
+        <div className="space-y-6">
+        <Card title="Email" className="h-fit">
+          <div className="mb-4 space-y-1 text-sm">
+            {u.contactEmail ? (
+              <p>
+                <span className="break-all font-medium">{u.contactEmail}</span>{" "}
+                {u.emailVerifiedAt ? <Badge tone="good">Verified</Badge> : <Badge tone="warn">Not verified</Badge>}
+              </p>
+            ) : (
+              <p className="text-muted">No email yet. Add one so you can reset your password yourself.</p>
+            )}
+            {u.pendingEmail && <p className="text-muted">Waiting for you to confirm {u.pendingEmail} — check that inbox.</p>}
+            <p className="text-xs text-muted">Password-reset links are sent here. Your sign-in name stays {u.email}.</p>
+          </div>
+          <ActionForm action={requestEmailChange}>
+            <Field label={u.contactEmail ? "New email" : "Email"} htmlFor="email">
+              <input id="email" name="email" type="email" required autoComplete="email" placeholder="name@gmail.com" className="input" />
+            </Field>
+            <Field label="Current password" htmlFor="emailCurrent" hint="To confirm it's you.">
+              <input id="emailCurrent" name="current" type="password" autoComplete="current-password" required className="input" />
+            </Field>
+            <SubmitButton>Send confirmation link</SubmitButton>
+          </ActionForm>
+        </Card>
         <Card title="Change password" className="h-fit">
           <ActionForm action={changePassword}>
             <Field label="Current password" htmlFor="current">
@@ -68,6 +92,7 @@ export default async function MyProfilePage() {
             <SubmitButton>Change password</SubmitButton>
           </ActionForm>
         </Card>
+        </div>
       </div>
     </>
   );

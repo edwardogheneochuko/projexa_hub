@@ -25,6 +25,7 @@ model Team {
   createdAt   DateTime @default(now())
 
   members     User[]
+  invites     TeamInvite[]
   attendance  Attendance[]
   kpis        Kpi[]
   reports     WeeklyReport[]
@@ -33,16 +34,25 @@ model Team {
 
 model User {
   id           String  @id @default(cuid())
-  /// Always <username>@projexahub.com for accounts created in Settings.
+  /// Sign-in identity: always <username>@projexahub.com for accounts created in Settings.
   email        String  @unique
-  /// Null until the person sets their own password with a setup code.
+  /// Null until the person accepts their invite and chooses a password.
   passwordHash String?
-  /// One-time setup code (bcrypt hash) issued by the Founder for first sign-in or a password reset.
-  setupCodeHash      String?
-  setupCodeExpiresAt DateTime?
-  setupCodeAttempts  Int       @default(0)
-  /// Set when the person asks for a password reset; cleared when a new setup code is used.
-  resetRequestedAt   DateTime?
+  /// The person's real inbox (Gmail etc.). Invite and password-reset links are sent here.
+  contactEmail     String?   @unique
+  /// Set once the person has proved they own contactEmail by clicking a link sent to it.
+  emailVerifiedAt  DateTime?
+  /// A new address waiting to be verified. contactEmail stays in use until then.
+  pendingEmail     String?
+  /// Raised when the password is reset or changed, which signs out every other session.
+  sessionVersion   Int       @default(0)
+  /// Set when someone without a verified email asks for a password reset (the Founder sees it).
+  resetRequestedAt DateTime?
+  tokens           AuthToken[]
+  /// Set for people who signed up through a team invitation link. They can't sign in until their email is verified.
+  joinedViaId      String?
+  joinedVia        TeamInvite?  @relation("JoinedVia", fields: [joinedViaId], references: [id], onDelete: SetNull)
+  invitesCreated   TeamInvite[] @relation("InviteCreator")
   name         String
   /// FOUNDER | HEAD | MEMBER
   role         String  @default("MEMBER")
@@ -73,6 +83,45 @@ model User {
   evaluations         Evaluation[]   @relation("EvaluationSubject")
   evaluationsWritten  Evaluation[]   @relation("EvaluationAuthor")
   hqRecordsUpdated    HqRecord[]
+}
+
+/// A shareable sign-up link created by the Founder (Settings → Team invitations).
+/// Anyone with the link can create an account in the chosen department and role, after verifying their email.
+model TeamInvite {
+  id          String    @id @default(cuid())
+  /// Random code in the link: /join/<code>
+  code        String    @unique
+  /// Department joiners are placed in. Null = the person chooses one.
+  teamId      String?
+  team        Team?     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  /// HEAD | MEMBER
+  role        String    @default("MEMBER")
+  /// Null = any number of people.
+  maxUses     Int?
+  uses        Int       @default(0)
+  expiresAt   DateTime
+  revokedAt   DateTime?
+  createdById String
+  createdBy   User      @relation("InviteCreator", fields: [createdById], references: [id])
+  createdAt   DateTime  @default(now())
+  members     User[]    @relation("JoinedVia")
+}
+
+/// Single-use links sent by email. Only a hash of the token is stored.
+model AuthToken {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// INVITE (first password) | RESET (forgot password) | VERIFY_EMAIL (change of email)
+  kind      String
+  tokenHash String    @unique
+  /// The address the link was sent to; for VERIFY_EMAIL, the address being verified.
+  email     String
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId, kind])
 }
 
 model Attendance {

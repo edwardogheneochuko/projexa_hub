@@ -11,20 +11,19 @@ export default function ForgotPasswordPage() {
       subtitle="Forgot password"
       footer={
         <>
-          <AuthLink href="/setup">I have a setup code</AuthLink>
           <AuthLink href="/login">Back to sign in</AuthLink>
         </>
       }
     >
       <div className="card p-6">
         <ol className="mb-4 list-decimal space-y-1 pl-5 text-sm text-muted">
-          <li>Enter your username and send the request.</li>
-          <li>The Founder resets your password and gives you a setup code.</li>
-          <li>Choose <strong>I have a setup code</strong> and set a new password.</li>
+          <li>Enter your username.</li>
+          <li>We email a reset link to the address on your account.</li>
+          <li>Open the link and choose a new password.</li>
         </ol>
         <ActionForm action={requestPasswordReset}>
           <UsernameInput autoFocus />
-          <SubmitButton className="btn-primary w-full">Send reset request</SubmitButton>
+          <SubmitButton className="btn-primary w-full">Email me a reset link</SubmitButton>
         </ActionForm>
       </div>
     </AuthShell>

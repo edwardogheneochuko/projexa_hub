@@ -35,17 +35,18 @@ export default async function SettingsPage({ searchParams }: { searchParams: Sea
       <PageHeader
         title="Settings & permissions"
         description="Manage accounts, roles, departments and access to confidential Finance and HR information. Confidential access is never granted automatically by department."
-        actions={<Link href="/settings/users/new" className="btn-primary">Add person</Link>}
+        actions={<Link href="/settings/invitations" className="btn-primary">Team invitations</Link>}
       />
       {resetRequests.length > 0 && (
         <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 p-4">
           <p className="font-semibold text-amber-900">Password reset requests</p>
+          <p className="text-sm text-amber-900">These people asked for a reset but have no verified email, so no link could be sent.</p>
           <ul className="mt-2 space-y-1 text-sm">
             {resetRequests.map((u) => (
               <li key={u.id} className="flex flex-wrap items-center gap-x-2">
                 <span className="font-medium">{u.name}</span>
                 <span className="text-muted">({usernameOf(u.email)}) asked {formatDate(u.resetRequestedAt!)}</span>
-                <Link href={`/settings/users/${u.id}`} className="link">Reset password →</Link>
+                <Link href={`/settings/users/${u.id}`} className="link">Fix email & send reset →</Link>
               </li>
             ))}
           </ul>
@@ -59,7 +60,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Sea
         <thead className="border-b border-line bg-cream/60">
           <tr>
             <th className="th">Name</th>
-            <th className="th">Username</th>
+            <th className="th">Username / email</th>
             <th className="th">Sign-in</th>
             <th className="th">Role</th>
             <th className="th">Department / team</th>
@@ -74,9 +75,12 @@ export default async function SettingsPage({ searchParams }: { searchParams: Sea
                 {u.name} {!u.active && <Badge tone="bad">Inactive</Badge>}
                 <p className="text-xs font-normal text-muted">{u.position}</p>
               </td>
-              <td className="td font-mono text-xs text-muted">{u.email}</td>
+              <td className="td text-xs text-muted">
+                <span className="font-mono">{u.email}</span>
+                {u.contactEmail && <span className="block break-all">{u.contactEmail}</span>}
+              </td>
               <td className="td">
-                {u.resetRequestedAt ? <Badge tone="warn">Reset requested</Badge> : u.passwordHash ? <Badge tone="good">Active</Badge> : <Badge tone="neutral">Not set up</Badge>}
+                {u.resetRequestedAt ? <Badge tone="warn">Reset requested</Badge> : u.passwordHash ? (u.emailVerifiedAt ? <Badge tone="good">Active</Badge> : <Badge tone="warn">No verified email</Badge>) : <Badge tone="neutral">Invite sent</Badge>}
               </td>
               <td className="td">{ROLE_LABELS[u.role as Role]}</td>
               <td className="td">{u.team?.name ?? "—"}</td>

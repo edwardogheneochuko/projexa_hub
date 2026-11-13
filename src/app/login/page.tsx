@@ -16,7 +16,6 @@ export default async function LoginPage() {
     <AuthShell
       footer={
         <>
-          <AuthLink href="/setup">First time here? / Reset password with a code</AuthLink>
           <AuthLink href="/forgot-password">Forgot password?</AuthLink>
         </>
       }

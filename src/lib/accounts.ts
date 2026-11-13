@@ -1,64 +1,80 @@
-// Account helpers: usernames on the organisation's email domain, and one-time setup codes
-// that let a person choose their own password (first sign-in or after a reset).
-import { randomInt } from "node:crypto";
-import bcrypt from "bcryptjs";
+// Account helpers: usernames on the organisation's domain, and single-use email links
+// (invite, password reset, email verification). Only a SHA-256 hash of each link token is stored.
+import { createHash, randomBytes } from "node:crypto";
+import { headers } from "next/headers";
 import { prisma } from "./db";
 
 export const EMAIL_DOMAIN = "projexahub.com";
-export const SETUP_CODE_DAYS = 7;
-export const MAX_SETUP_ATTEMPTS = 5;
 export const MIN_PASSWORD = 8;
 
-const USERNAME_RE = /^[a-z0-9]+(?:[._-][a-z0-9]+)*$/;
+export type TokenKind = "INVITE" | "RESET" | "VERIFY_EMAIL";
+const HOUR = 60 * 60 * 1000;
+export const TOKEN_TTL: Record<TokenKind, number> = { INVITE: 48 * HOUR, RESET: 1 * HOUR, VERIFY_EMAIL: 24 * HOUR };
+export const TTL_LABEL: Record<TokenKind, string> = { INVITE: "2 days", RESET: "1 hour", VERIFY_EMAIL: "24 hours" };
+const PATHS: Record<TokenKind, string> = { INVITE: "/invite", RESET: "/reset-password", VERIFY_EMAIL: "/verify-email" };
 
+const USERNAME_RE = /^[a-z0-9]+(?:[._-][a-z0-9]+)*$/;
 export function isValidUsername(u: string) {
   return u.length >= 2 && u.length <= 40 && USERNAME_RE.test(u);
 }
+export const isValidEmail = (e: string) => e.length <= 200 && /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(e);
+export const normaliseEmail = (e: string) => e.trim().toLowerCase();
 
-/** "tobi.adeyemi" → "tobi.adeyemi@projexahub.com". A full email is accepted as typed. */
+/** "tobi.adeyemi" → "tobi.adeyemi@projexahub.com". A full sign-in email is accepted as typed. */
 export function toEmail(input: string) {
   const v = input.trim().toLowerCase();
   return v.includes("@") ? v : `${v}@${EMAIL_DOMAIN}`;
 }
-
 export function usernameOf(email: string) {
   return email.split("@")[0];
 }
 
-// No 0/O, 1/I/L so codes are easy to read out over the phone.
-const ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
-const normaliseCode = (c: string) => c.replace(/[^a-z0-9]/gi, "").toUpperCase();
+const hash = (raw: string) => createHash("sha256").update(raw).digest("hex");
 
-/**
- * Issue a new one-time setup code for a user and return it in plain text (shown once to the Founder).
- * Clears the current password, so an old or forgotten password stops working immediately.
- */
-export async function issueSetupCode(userId: string) {
-  const raw = Array.from({ length: 8 }, () => ALPHABET[randomInt(ALPHABET.length)]).join("");
-  await prisma.user.update({
-    where: { id: userId },
-    data: {
-      passwordHash: null,
-      setupCodeHash: await bcrypt.hash(raw, 10),
-      setupCodeExpiresAt: new Date(Date.now() + SETUP_CODE_DAYS * 24 * 60 * 60 * 1000),
-      setupCodeAttempts: 0,
-    },
-  });
-  return `${raw.slice(0, 4)}-${raw.slice(4)}`;
+/** Base URL for links in emails: APP_URL if set, otherwise the address this request came in on. */
+export async function appUrl() {
+  if (process.env.APP_URL) return process.env.APP_URL.replace(/\/$/, "");
+  try {
+    const h = await headers();
+    const host = h.get("x-forwarded-host") ?? h.get("host");
+    if (host) return `${h.get("x-forwarded-proto") ?? (host.startsWith("localhost") ? "http" : "https")}://${host}`;
+  } catch {
+    // Not in a request (e.g. a script).
+  }
+  return "http://localhost:3000";
 }
 
-/** Checks a setup code. Wrong guesses count towards a limit, after which the code is cancelled. */
-export async function checkSetupCode(
-  user: { id: string; setupCodeHash: string | null; setupCodeExpiresAt: Date | null; setupCodeAttempts: number },
-  code: string,
-): Promise<"ok" | "invalid" | "expired"> {
-  if (!user.setupCodeHash || !user.setupCodeExpiresAt) return "invalid";
-  if (user.setupCodeExpiresAt < new Date() || user.setupCodeAttempts >= MAX_SETUP_ATTEMPTS) return "expired";
-  if (await bcrypt.compare(normaliseCode(code), user.setupCodeHash)) return "ok";
-  const attempts = user.setupCodeAttempts + 1;
-  await prisma.user.update({
-    where: { id: user.id },
-    data: attempts >= MAX_SETUP_ATTEMPTS ? { setupCodeAttempts: attempts, setupCodeHash: null, setupCodeExpiresAt: null } : { setupCodeAttempts: attempts },
-  });
-  return attempts >= MAX_SETUP_ATTEMPTS ? "expired" : "invalid";
+/**
+ * Create a single-use link for a user. Any earlier unused link of the same kind stops working,
+ * so only the most recent email is valid.
+ */
+export async function createLink(userId: string, kind: TokenKind, email: string, base?: string) {
+  const raw = randomBytes(32).toString("base64url");
+  const now = new Date();
+  await prisma.$transaction([
+    prisma.authToken.updateMany({ where: { userId, kind, usedAt: null }, data: { usedAt: now } }),
+    prisma.authToken.create({ data: { userId, kind, email, tokenHash: hash(raw), expiresAt: new Date(now.getTime() + TOKEN_TTL[kind]) } }),
+  ]);
+  return `${base ?? (await appUrl())}${PATHS[kind]}?token=${raw}`;
+}
+
+/** Look up a link without using it up (to show the right page). */
+export async function findLink(raw: string | undefined, kind: TokenKind) {
+  if (!raw || raw.length < 20) return { status: "invalid" as const };
+  const t = await prisma.authToken.findUnique({ where: { tokenHash: hash(raw) }, include: { user: true } });
+  if (!t || t.kind !== kind || !t.user.active) return { status: "invalid" as const };
+  if (t.usedAt) return { status: "used" as const };
+  if (t.expiresAt < new Date()) return { status: "expired" as const };
+  return { status: "ok" as const, token: t };
+}
+
+/** Mark a link as used. Returns false if someone used it in the meantime. */
+export async function consumeLink(id: string) {
+  const r = await prisma.authToken.updateMany({ where: { id, usedAt: null }, data: { usedAt: new Date() } });
+  return r.count === 1;
+}
+
+/** How many links of this kind were sent to the user recently (to stop email floods). */
+export async function recentLinks(userId: string, kind: TokenKind, withinMs = HOUR) {
+  return prisma.authToken.count({ where: { userId, kind, createdAt: { gte: new Date(Date.now() - withinMs) } } });
 }

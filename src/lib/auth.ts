@@ -12,7 +12,8 @@ export const getCurrentUser = cache(async () => {
     where: { id: session.userId },
     include: { team: true },
   });
-  if (!user || !user.active) return null;
+  // Signed out by a password reset/change elsewhere, or deactivated.
+  if (!user || !user.active || user.sessionVersion !== session.sv) return null;
   return user;
 });
 

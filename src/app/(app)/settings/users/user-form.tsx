@@ -43,11 +43,31 @@ export function UserForm({ user, teams }: { user?: User; teams: Team[] }) {
             ))}
           </select>
         </Field>
-        <div className="sm:col-span-2">
-          <Field label="Position" htmlFor="position" hint="e.g. Social Media Lead">
-            <input id="position" name="position" defaultValue={user?.position} className="input" />
-          </Field>
-        </div>
+        <Field
+          label="Email"
+          htmlFor="contactEmail"
+          hint={
+            user?.pendingEmail
+              ? `Waiting for confirmation of ${user.pendingEmail}.`
+              : user?.passwordHash
+                ? "Changing it emails a confirmation link to the new address. The current one stays in use until then."
+                : "Their real inbox (e.g. Gmail). The invite is sent here."
+          }
+        >
+          <input
+            id="contactEmail"
+            name="contactEmail"
+            type="email"
+            defaultValue={user?.contactEmail ?? ""}
+            required={!user}
+            autoComplete="off"
+            placeholder="name@gmail.com"
+            className="input"
+          />
+        </Field>
+        <Field label="Position" htmlFor="position" hint="e.g. Social Media Lead">
+          <input id="position" name="position" defaultValue={user?.position} className="input" />
+        </Field>
       </div>
 
       <fieldset className="rounded-lg border border-line p-4">
@@ -63,7 +83,7 @@ export function UserForm({ user, teams }: { user?: User; teams: Team[] }) {
 
       {!user && (
         <p className="rounded-lg bg-cream px-3 py-2 text-sm text-muted">
-          You don&apos;t set a password. After you create the account you&apos;ll get a one-time <strong>setup code</strong> to give them, and they choose their own password.
+          You don&apos;t set a password. When you create the account, an <strong>invite email</strong> goes to the address above. They click it, which confirms their email, and choose their own password.
         </p>
       )}
 

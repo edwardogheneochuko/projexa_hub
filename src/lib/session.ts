@@ -26,21 +26,23 @@ function secret() {
   return new TextEncoder().encode(s);
 }
 
-export async function signSession(userId: string) {
-  return new SignJWT({ sub: userId })
+/** `sv` is the user's session version: raising it in the database signs out every older session. */
+export async function signSession(userId: string, sv: number) {
+  return new SignJWT({ sub: userId, sv })
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
     .setExpirationTime(`${SESSION_IDLE_SECONDS}s`)
     .sign(secret());
 }
 
-export async function verifySession(token: string | undefined): Promise<{ userId: string; needsRefresh: boolean } | null> {
+export async function verifySession(token: string | undefined): Promise<{ userId: string; sv: number; needsRefresh: boolean } | null> {
   if (!token) return null;
   try {
     const { payload } = await jwtVerify(token, secret());
     if (typeof payload.sub !== "string") return null;
     const age = Math.floor(Date.now() / 1000) - (payload.iat ?? 0);
-    return { userId: payload.sub, needsRefresh: age > REFRESH_AFTER_SECONDS };
+    const sv = typeof payload.sv === "number" ? payload.sv : 0;
+    return { userId: payload.sub, sv, needsRefresh: age > REFRESH_AFTER_SECONDS };
   } catch {
     return null;
   }

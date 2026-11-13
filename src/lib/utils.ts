@@ -35,4 +35,4 @@ export function splitLinks(s: string): string[] {
 export type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
 /** Result shape for form server actions used with <ActionForm>. */
-export type ActionResult = { error?: string; ok?: string; setupCode?: { code: string; username: string; days: number } } | undefined;
+export type ActionResult = { error?: string; ok?: string } | undefined;
