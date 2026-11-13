@@ -48,6 +48,10 @@ model User {
   sessionVersion   Int       @default(0)
   /// Set when someone without a verified email asks for a password reset (the Founder sees it).
   resetRequestedAt DateTime?
+  /// Retired (setup codes were replaced by email links). Kept so schema updates never delete live data.
+  setupCodeHash      String?
+  setupCodeExpiresAt DateTime?
+  setupCodeAttempts  Int       @default(0)
   tokens           AuthToken[]
   /// Set for people who signed up through a team invitation link. They can't sign in until their email is verified.
   joinedViaId      String?
