@@ -28,7 +28,7 @@ export default async function LoginPage() {
           <div className="mt-3 flex gap-2">
             <Link href="/" className="btn-secondary flex-1">Continue as {current.name.split(" ")[0]}</Link>
             <form action={logout} className="flex-1">
-              <button className="btn-secondary w-full">Sign out</button>
+              <button type="submit" className="btn-secondary w-full">Sign out</button>
             </form>
           </div>
           <p className="mt-3 text-xs text-muted">Not you? Sign in with your own account below.</p>

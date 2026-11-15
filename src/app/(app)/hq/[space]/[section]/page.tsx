@@ -8,6 +8,7 @@ import { currentMonth, isValidMonth } from "@/lib/periods";
 import { cn, naira, sp, type SearchParams } from "@/lib/utils";
 import { Badge, EmptyState, FilterBar, FilterSelect, PageHeader } from "@/components/ui";
 import { FieldValue, RecordCalendar } from "@/components/hq";
+import { SmartTable } from "@/components/smart-table";
 
 type Params = Promise<{ space: string; section: string }>;
 
@@ -101,7 +102,7 @@ export default async function SectionPage({ params, searchParams }: { params: Pa
         <EmptyState>{records.length === 0 ? "No records yet." : "No records match these filters."}</EmptyState>
       ) : (
         <div className="card overflow-x-auto">
-          <table className="w-full min-w-[640px]">
+          <SmartTable tableClassName="w-full min-w-[640px]">
             <thead className="border-b border-line bg-cream/60">
               <tr>
                 {columns.map((c) => (
@@ -138,7 +139,7 @@ export default async function SectionPage({ params, searchParams }: { params: Pa
                 </tr>
               </tfoot>
             )}
-          </table>
+          </SmartTable>
         </div>
       )}
     </>

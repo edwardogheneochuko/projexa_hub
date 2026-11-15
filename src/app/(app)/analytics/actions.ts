@@ -8,6 +8,8 @@ import { canManageTeam, canViewPerson } from "@/lib/permissions";
 import { currentWeek, isValidDate, isValidMonth, isValidWeek } from "@/lib/periods";
 import { isSafeUrl } from "@/lib/hq";
 import { splitLinks, type ActionResult } from "@/lib/utils";
+import { checklistFor, monthlyAverage } from "@/lib/checklist";
+import { itemScore, overallScore } from "@/lib/checklist-score";
 
 const STATUSES = ["PRESENT", "ABSENT", "LATE", "EXCUSED"];
 const str = (fd: FormData, k: string, max = 5000) => String(fd.get(k) ?? "").trim().slice(0, max);
@@ -140,29 +142,57 @@ export async function submitReport(_prev: ActionResult, fd: FormData): Promise<A
   const existing = await prisma.weeklyReport.findUnique({ where: { userId_period: { userId: user.id, period } } });
   if (existing?.status === "REVIEWED") return { error: "This report has already been reviewed and can no longer be edited." };
 
+  // Weekly checklist (PRD §4.2): every item must be answered validly; the score is calculated here.
+  const checklist = await checklistFor(user);
+  const answers: { itemId: string; sortOrder: number; title: string; method: string; target: number | null; unit: string; weight: number; value: number; score: number; note: string }[] = [];
+  if (checklist) {
+    for (const [n, item] of checklist.items.entries()) {
+      const raw = str(fd, `ans_${item.id}`, 30);
+      const value = raw === "" ? null : Number(raw);
+      const score = itemScore(item, value);
+      if (score === null) {
+        return { error: `Checklist item ${n + 1} (“${item.title}”) needs a valid answer${item.method === "TARGET" ? " — a number of 0 or more" : ""}.` };
+      }
+      answers.push({ itemId: item.id, sortOrder: n, title: item.title, method: item.method, target: item.target, unit: item.unit, weight: item.weight, value: value!, score, note: str(fd, `note_${item.id}`, 300) });
+    }
+  }
+  const score = checklist ? overallScore(answers) : null;
+
   const data = {
     kpiResults: str(fd, "kpiResults"),
     contributions,
     challenges: str(fd, "challenges"),
     remarks: str(fd, "remarks"),
     links: links.join("\n"),
+    checklistId: checklist?.id ?? null,
+    score,
+    benchmark: checklist?.benchmark ?? null,
   };
-  const report = existing
-    ? await prisma.weeklyReport.update({ where: { id: existing.id }, data })
-    : await prisma.weeklyReport.create({ data: { ...data, userId: user.id, teamId: user.teamId, period } });
+  const report = await prisma.$transaction(async (tx) => {
+    const r = existing
+      ? await tx.weeklyReport.update({ where: { id: existing.id }, data })
+      : await tx.weeklyReport.create({ data: { ...data, userId: user.id, teamId: user.teamId!, period } });
+    await tx.checklistAnswer.deleteMany({ where: { reportId: r.id } });
+    if (answers.length) await tx.checklistAnswer.createMany({ data: answers.map((a) => ({ ...a, reportId: r.id })) });
+    return r;
+  });
   revalidatePath("/analytics", "layout");
   redirect(`/analytics/reports/${report.id}`);
 }
 
-export async function markReviewed(id: string) {
+/** Review a weekly report with feedback (PRD §4.2 "Founders' review and feedback"). The author then sees it. */
+export async function reviewReport(id: string, _prev: ActionResult, fd: FormData): Promise<ActionResult> {
   const user = await requireUser();
   const r = await prisma.weeklyReport.findUnique({ where: { id } });
-  if (!r || !canManageTeam(user, r.teamId) || r.userId === user.id) return;
+  if (!r || !canManageTeam(user, r.teamId) || r.userId === user.id) return { error: "You can't review this report." };
+  if (r.status === "REVIEWED") return { error: "This report has already been reviewed." };
   await prisma.weeklyReport.update({
     where: { id },
-    data: { status: "REVIEWED", reviewedById: user.id, reviewedAt: new Date() },
+    data: { status: "REVIEWED", reviewedById: user.id, reviewedAt: new Date(), feedback: str(fd, "feedback", 2000) },
   });
   revalidatePath("/analytics", "layout");
+  revalidatePath("/dashboard", "layout");
+  return { ok: "Marked as reviewed. The author can now see your feedback." };
 }
 
 // ------------------------------------------------------------------ Evaluations
@@ -190,10 +220,13 @@ export async function saveEvaluation(_prev: ActionResult, fd: FormData): Promise
   if (!data.remarks && !data.strengths && !data.improvements) {
     return { error: "Add at least strengths, areas for improvement or remarks." };
   }
+  // Monthly evaluation based on weekly performance (PRD §4.2): the month's average checklist score.
+  const monthly = await monthlyAverage(userId, month);
+  const withScore = { ...data, score: monthly.average, scoredReports: monthly.count };
   const ev = await prisma.evaluation.upsert({
     where: { userId_month: { userId, month } },
-    create: { ...data, userId, month },
-    update: data,
+    create: { ...withScore, userId, month },
+    update: withScore,
   });
   revalidatePath("/analytics", "layout");
   redirect(`/analytics/evaluations/${ev.id}`);

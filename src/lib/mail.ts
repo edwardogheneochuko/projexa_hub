@@ -23,8 +23,11 @@ export async function sendMail(mail: Mail) {
     console.log(`[mail] Not configured — saved "${mail.subject}" to ${mail.to} in ${OUTBOX_DIR}`);
     return;
   }
+  // Gmail SMTP over TLS (port 465): the connection is encrypted from the start.
   const transport = nodemailer.createTransport({
-    service: "gmail",
+    host: "smtp.gmail.com",
+    port: 465,
+    secure: true,
     auth: { user: process.env.GMAIL_USER, pass: process.env.GMAIL_APP_PASSWORD },
   });
   await transport.sendMail({ from: `"Projexa Hub Central" <${process.env.GMAIL_USER}>`, ...mail });

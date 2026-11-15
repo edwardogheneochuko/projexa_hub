@@ -8,6 +8,8 @@ import { currentMonth, isValidMonth, monthLabel, monthOptions, weekRange, weeksO
 import { pct, sp, type SearchParams } from "@/lib/utils";
 import { Card, EmptyState, Field, PageHeader } from "@/components/ui";
 import { ActionForm, SubmitButton } from "@/components/forms";
+import { monthlyAverage } from "@/lib/checklist";
+import { performanceStatus } from "@/lib/checklist-score";
 import { saveEvaluation } from "../../actions";
 
 export const metadata: Metadata = { title: "Write evaluation" };
@@ -42,19 +44,20 @@ export default async function WriteEvaluationPage({ searchParams }: { searchPara
   const subject = people.find((p) => p.id === sp(params, "user"));
   const crumbs = [{ href: "/analytics/evaluations", label: "Monthly evaluations" }];
 
-  let facts: { attendance: number | null; sessions: number; reports: number; weeks: number; kpi: number | null } | null = null;
+  let facts: { attendance: number | null; sessions: number; reports: number; weeks: number; kpi: number | null; score: number | null; scored: number; benchmark: number | null } | null = null;
   let existing = null;
   if (subject?.teamId && canManageTeam(user, subject.teamId)) {
     const weeks = weeksOfMonth(month);
     const from = weekRange(weeks[0]).from;
     const to = weekRange(weeks[weeks.length - 1]).to;
-    const [att, reports, kpis, ev] = await Promise.all([
+    const [att, reports, kpis, ev, monthly] = await Promise.all([
       prisma.attendance.findMany({ where: { userId: subject.id, date: { gte: from, lte: to } }, select: { status: true } }),
       prisma.weeklyReport.count({ where: { userId: subject.id, period: { in: weeks } } }),
       prisma.kpi.findMany({ where: { teamId: subject.teamId, period: { in: weeks } }, select: { target: true, actual: true } }),
       prisma.evaluation.findUnique({ where: { userId_month: { userId: subject.id, month } } }),
+      monthlyAverage(subject.id, month),
     ]);
-    facts = { attendance: attendanceRate(att), sessions: att.length, reports, weeks: weeks.length, kpi: kpiAverage(kpis) };
+    facts = { attendance: attendanceRate(att), sessions: att.length, reports, weeks: weeks.length, kpi: kpiAverage(kpis), score: monthly.average, scored: monthly.count, benchmark: monthly.benchmark };
     existing = ev;
   }
 
@@ -102,6 +105,16 @@ export default async function WriteEvaluationPage({ searchParams }: { searchPara
 
           <Card title={`Recorded facts · ${monthLabel(month)}`} className="h-fit">
             <dl className="space-y-3 text-sm">
+              <div>
+                <dt className="text-muted">Weekly performance score (average)</dt>
+                <dd className="font-semibold">
+                  {pct(facts.score)}{" "}
+                  <span className="font-normal text-muted">
+                    ({facts.scored} scored report{facts.scored === 1 ? "" : "s"}{facts.score !== null ? ` · ${performanceStatus(facts.score, facts.benchmark)}` : ""})
+                  </span>
+                </dd>
+                <p className="text-xs text-muted">Calculated from the weekly checklists and saved with the evaluation.</p>
+              </div>
               <div><dt className="text-muted">Attendance rate</dt><dd className="font-semibold">{pct(facts.attendance)} <span className="font-normal text-muted">({facts.sessions} sessions)</span></dd></div>
               <div><dt className="text-muted">Weekly reports submitted</dt><dd className="font-semibold">{facts.reports} of {facts.weeks}</dd></div>
               <div><dt className="text-muted">Team KPI achievement</dt><dd className="font-semibold">{pct(facts.kpi)}</dd></div>

@@ -26,6 +26,7 @@ model Team {
 
   members     User[]
   invites     TeamInvite[]
+  checklists  Checklist[]
   attendance  Attendance[]
   kpis        Kpi[]
   reports     WeeklyReport[]
@@ -111,6 +112,64 @@ model TeamInvite {
   members     User[]    @relation("JoinedVia")
 }
 
+/// Weekly performance checklist (PRD §4.2), set up by management in Settings → Performance checklists.
+/// Assigned by department and/or role; the most specific active checklist applies to a person.
+model Checklist {
+  id        String          @id @default(cuid())
+  name      String
+  /// Null = every department.
+  teamId    String?
+  team      Team?           @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  /// Null = every role. Otherwise HEAD | LEAD | MEMBER | REP.
+  role      String?
+  /// Expected weekly score (%), e.g. 80. At or above = On Track.
+  benchmark Int             @default(80)
+  active    Boolean         @default(true)
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+  items     ChecklistItem[]
+  reports   WeeklyReport[]
+}
+
+model ChecklistItem {
+  id          String    @id @default(cuid())
+  checklistId String
+  checklist   Checklist @relation(fields: [checklistId], references: [id], onDelete: Cascade)
+  sortOrder   Int       @default(0)
+  /// The performance expectation, e.g. "Publish weekly content".
+  title       String
+  /// How it is measured / what counts as done.
+  description String    @default("")
+  /// YESNO (done = 100%) | TARGET (actual ÷ target, capped at 100%) | SCALE (rating 1–5 = 20–100%)
+  method      String    @default("YESNO")
+  target      Float?
+  unit        String    @default("")
+  /// Relative importance in the weighted average (1–10).
+  weight      Int       @default(1)
+}
+
+/// One answered checklist item on a weekly report. The item's wording and scoring are copied in,
+/// so editing a checklist later never changes past scores.
+model ChecklistAnswer {
+  id        String       @id @default(cuid())
+  reportId  String
+  report    WeeklyReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  itemId    String?
+  sortOrder Int          @default(0)
+  title     String
+  method    String
+  target    Float?
+  unit      String       @default("")
+  weight    Int          @default(1)
+  /// YESNO: 1 or 0; TARGET: the actual number; SCALE: 1–5.
+  value     Float
+  /// This item's score, 0–100.
+  score     Float
+  note      String       @default("")
+
+  @@index([reportId])
+}
+
 /// Failed sign-in attempts, used to slow down password guessing. Old rows are cleared automatically.
 model LoginAttempt {
   id        String   @id @default(cuid())
@@ -194,6 +253,15 @@ model WeeklyReport {
   links         String    @default("")
   /// SUBMITTED | REVIEWED
   status        String    @default("SUBMITTED")
+  /// Checklist used for this report (PRD §4.2) and its automatically calculated score, 0–100.
+  checklistId   String?
+  checklist     Checklist?        @relation(fields: [checklistId], references: [id], onDelete: SetNull)
+  score         Float?
+  /// Benchmark that applied when submitted (copied from the checklist).
+  benchmark     Int?
+  answers       ChecklistAnswer[]
+  /// Reviewer's feedback, shown to the author once reviewed.
+  feedback      String    @default("")
   reviewedById  String?
   reviewedBy    User?     @relation("ReportReviewer", fields: [reviewedById], references: [id])
   reviewedAt    DateTime?
@@ -221,6 +289,10 @@ model Evaluation {
   strengths    String   @default("")
   improvements String   @default("")
   remarks      String   @default("")
+  /// Average weekly checklist score for the month, calculated when the evaluation is saved (PRD §4.2).
+  score        Float?
+  /// Number of scored weekly reports in that average.
+  scoredReports Int     @default(0)
   evaluatorId  String
   evaluator    User     @relation("EvaluationAuthor", fields: [evaluatorId], references: [id])
   createdAt    DateTime @default(now())

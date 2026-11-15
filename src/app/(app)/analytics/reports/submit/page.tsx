@@ -8,6 +8,8 @@ import { pct, sp, type SearchParams } from "@/lib/utils";
 import { Card, EmptyState, Field, PageHeader } from "@/components/ui";
 import { ActionForm, SubmitButton } from "@/components/forms";
 import { submitReport } from "../../actions";
+import { checklistFor } from "@/lib/checklist";
+import { ChecklistFields } from "@/components/checklist-fields";
 
 export const metadata: Metadata = { title: "Submit weekly report" };
 
@@ -24,10 +26,13 @@ export default async function SubmitReportPage({ searchParams }: { searchParams:
     );
   }
   const period = isValidWeek(sp(params, "period")) && sp(params, "period") <= currentWeek() ? sp(params, "period") : currentWeek();
-  const [existing, kpis] = await Promise.all([
-    prisma.weeklyReport.findUnique({ where: { userId_period: { userId: user.id, period } } }),
+  const [existing, kpis, checklist] = await Promise.all([
+    prisma.weeklyReport.findUnique({ where: { userId_period: { userId: user.id, period } }, include: { answers: true } }),
     prisma.kpi.findMany({ where: { teamId: user.teamId, period }, orderBy: { name: "asc" } }),
+    checklistFor(user),
   ]);
+  // Previous answers (when updating), matched to the current items.
+  const initial = Object.fromEntries((existing?.answers ?? []).filter((a) => a.itemId).map((a) => [a.itemId!, { value: a.value, note: a.note }]));
 
   if (existing?.status === "REVIEWED") {
     return (
@@ -63,6 +68,15 @@ export default async function SubmitReportPage({ searchParams }: { searchParams:
       <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
         <ActionForm action={submitReport} className="card p-5">
           <input type="hidden" name="period" value={period} />
+          {checklist ? (
+            <ChecklistFields
+              benchmark={checklist.benchmark}
+              initial={initial}
+              items={checklist.items.map((i) => ({ id: i.id, title: i.title, description: i.description, method: i.method, target: i.target, unit: i.unit, weight: i.weight }))}
+            />
+          ) : (
+            <p className="rounded-lg bg-cream px-3 py-2 text-xs text-muted">No weekly checklist has been set up for your department or role yet, so this report has no score.</p>
+          )}
           <Field label="KPI results" htmlFor="kpiResults" hint="Your results against the team's KPIs this week.">
             <textarea id="kpiResults" name="kpiResults" rows={4} defaultValue={existing?.kpiResults} className="input" />
           </Field>

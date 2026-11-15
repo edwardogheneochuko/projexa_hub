@@ -122,7 +122,7 @@ async function main() {
 
       for (const [name, description, target, unit] of KPIS[team.slug]) {
         const ratio = Math.max(0.3, level + (rand() - 0.5) * 0.4);
-        const actual = isCurrent && rand() < 0.6 ? null : Math.round(target * ratio * (unit === "₦" ? 1 : 1));
+        const actual = isCurrent && rand() < 0.6 ? null : Math.round(target * ratio);
         await prisma.kpi.create({ data: { teamId: team.id, period: week, name, description, target, unit, actual, updatedById: head.id } });
       }
 

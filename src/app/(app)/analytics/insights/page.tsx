@@ -11,6 +11,7 @@ import { Card, FilterBar, FilterSelect, PageHeader, PctCell, StatTile } from "@/
 import { ComparisonBars, TrendChart } from "@/components/charts";
 import { TeamComparisonTable } from "@/components/dashboards";
 import { PrintButton } from "@/components/print-button";
+import { SmartTable } from "@/components/smart-table";
 
 export const metadata: Metadata = { title: "Performance reports" };
 
@@ -97,7 +98,7 @@ export default async function InsightsPage({ searchParams }: { searchParams: Sea
 
         <Card title="Individual performance">
           <div className="-mx-4 overflow-x-auto sm:-mx-5">
-            <table className="w-full min-w-[640px]">
+            <SmartTable tableClassName="w-full min-w-[640px]">
               <thead className="border-b border-line">
                 <tr>
                   <th className="th pl-5">Member</th>
@@ -120,13 +121,13 @@ export default async function InsightsPage({ searchParams }: { searchParams: Sea
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </SmartTable>
           </div>
         </Card>
 
         <Card title="Monthly evaluation summary (evaluations recorded / members)">
           <div className="-mx-4 overflow-x-auto sm:-mx-5">
-            <table className="w-full min-w-[640px]">
+            <SmartTable tableClassName="w-full min-w-[640px]">
               <thead className="border-b border-line">
                 <tr>
                   <th className="th pl-5">Team</th>
@@ -147,7 +148,7 @@ export default async function InsightsPage({ searchParams }: { searchParams: Sea
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </SmartTable>
           </div>
         </Card>
 

@@ -35,7 +35,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Sea
       <PageHeader
         title="Settings & permissions"
         description="Manage accounts, roles, departments and access to confidential Finance and HR information. Confidential access is never granted automatically by department."
-        actions={<Link href="/settings/invitations" className="btn-primary">Team invitations</Link>}
+        actions={<><Link href="/settings/checklists" className="btn-secondary">Performance checklists</Link><Link href="/settings/invitations" className="btn-primary">Team invitations</Link></>}
       />
       {resetRequests.length > 0 && (
         <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 p-4">

@@ -6,6 +6,7 @@ import { requireUser } from "@/lib/auth";
 import { canManageTeam, canViewPerson } from "@/lib/permissions";
 import { formatDate, monthLabel } from "@/lib/periods";
 import { Card, PageHeader } from "@/components/ui";
+import { performanceStatus } from "@/lib/checklist-score";
 import { ConfirmButton } from "@/components/forms";
 import { deleteEvaluation } from "../../actions";
 
@@ -43,6 +44,14 @@ export default async function EvaluationPage({ params }: { params: Promise<{ id:
           )
         }
       />
+      {e.score !== null && (
+        <Card className="mb-6">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted">Weekly performance score — monthly average</p>
+          <p className="mt-1 text-2xl font-bold">
+            {Math.round(e.score)}% <span className="text-sm font-normal text-muted">from {e.scoredReports} weekly report{e.scoredReports === 1 ? "" : "s"} · {performanceStatus(e.score, null)}</span>
+          </p>
+        </Card>
+      )}
       <Card>
         <div className="grid gap-5 md:grid-cols-2">
           {SECTIONS.map(([key, label]) => (

@@ -8,6 +8,7 @@ import { pct } from "@/lib/utils";
 import { getSpace, SPACES } from "@/lib/hq-config";
 import { parseData } from "@/lib/hq";
 import { ComparisonBars, TrendChart } from "./charts";
+import { SmartTable } from "./smart-table";
 import {
   ATTENDANCE_LABEL,
   ATTENDANCE_TONE,
@@ -189,7 +190,7 @@ export async function OrgDashboard({ weeks }: { weeks: number }) {
 export function TeamComparisonTable({ perf }: { perf: Performance }) {
   return (
     <div className="-mx-4 overflow-x-auto sm:-mx-5">
-      <table className="w-full min-w-[640px]">
+      <SmartTable tableClassName="w-full min-w-[640px]">
         <thead className="border-b border-line">
           <tr>
             <th className="th pl-5">Team</th>
@@ -214,7 +215,7 @@ export function TeamComparisonTable({ perf }: { perf: Performance }) {
             </tr>
           ))}
         </tbody>
-      </table>
+      </SmartTable>
     </div>
   );
 }
@@ -338,7 +339,7 @@ export async function TeamDashboard({ team, weeks }: { team: Team; weeks: number
 
       <Card title="Individual team members">
         <div className="-mx-4 overflow-x-auto sm:-mx-5">
-          <table className="w-full min-w-[640px]">
+          <SmartTable tableClassName="w-full min-w-[640px]">
             <thead className="border-b border-line">
               <tr>
                 <th className="th pl-5">Member</th>
@@ -364,7 +365,7 @@ export async function TeamDashboard({ team, weeks }: { team: Team; weeks: number
                 </tr>
               ))}
             </tbody>
-          </table>
+          </SmartTable>
         </div>
       </Card>
 

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { cn, initials, pct } from "@/lib/utils";
 import { BENCHMARK, type KpiStatus } from "@/lib/kpi";
+import { SmartTable } from "./smart-table";
 
 export function PageHeader({
   title,
@@ -154,11 +155,12 @@ export function EmptyState({ children }: { children: React.ReactNode }) {
   return <div className="rounded-lg border border-dashed border-line bg-cream/50 px-4 py-8 text-center text-sm text-muted">{children}</div>;
 }
 
+/** Card-style table with sorting and search (PRD §7.5). */
 export function TableWrap({ children }: { children: React.ReactNode }) {
   return (
-    <div className="card overflow-x-auto">
-      <table className="w-full min-w-[640px] border-collapse">{children}</table>
-    </div>
+    <SmartTable wrapperClassName="card" tableClassName="w-full min-w-[640px] border-collapse">
+      {children}
+    </SmartTable>
   );
 }
 

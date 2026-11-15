@@ -69,6 +69,20 @@ Representatives can only belong to the Alumni or Campus Structure department.
 
 Confidential access is granted per person in **Settings & permissions**. Belonging to the Finance department does **not** grant Finance access on its own (PRD §8, Confidentiality).
 
+## Weekly checklist and performance score (PRD §4.2)
+
+Management sets up the checklists in **Settings → Performance checklists**: one per department and/or role, up to **12 items**. Each item has an expectation, how it's measured, a scoring method and a weight:
+
+- **Done / Not done**: done = 100%, not done = 0%
+- **Number against a target**: actual ÷ target, capped at 100% (e.g. 4 of 5 posts = 80%)
+- **Rating 1–5**: 1 = 20% … 5 = 100%
+
+The **weekly performance score** is the weighted average of the items. A person gets the most specific active checklist (department + role, then department, then role, then everyone). When they submit their weekly report they complete the checklist; every item must be answered validly, they see the score as they go, and the server recalculates it. **On Track** means at or above the checklist's benchmark (80% by default); otherwise **Needs Improvement**.
+
+Reviewers (Founder, Departmental Lead) mark reports as reviewed with **feedback**, which the author then sees with their score and status. Each answer is saved with a copy of the item, so editing or deleting a checklist never changes past scores. **Monthly evaluations** automatically include the month's average weekly score. Team Overview → **Performance** shows the PRD §4.1.2 Team Dashboard columns.
+
+**Tables** (PRD §7.5): every table has clickable column headings to sort and a search box. Paginated dashboard tables sort the whole list on the server.
+
 ## How figures are calculated
 
 These are plain statistics. No combined or weighted score is generated, because PRD §5.9 requires approval for any such formula. The definitions are shown in the app under "How these figures are calculated".

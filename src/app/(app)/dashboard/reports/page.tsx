@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { reportsData, requireLeader, scopeTeams } from "@/lib/dashboard";
+import { dirOf, reportsData, requireLeader, scopeTeams } from "@/lib/dashboard";
 import { formatDate } from "@/lib/periods";
 import { sp, type SearchParams } from "@/lib/utils";
 import { Avatar } from "@/components/ui";
@@ -14,7 +14,7 @@ export default async function PerformanceReportPage({ searchParams }: { searchPa
   const params = await searchParams;
   const teams = await scopeTeams(user);
   const tab = sp(params, "tab") === "monthly" ? "monthly" : "weekly";
-  const f = { tab, team: sp(params, "team"), status: sp(params, "status"), q: sp(params, "q").trim(), page: sp(params, "page") } as const;
+  const f = { tab, team: sp(params, "team"), status: sp(params, "status"), q: sp(params, "q").trim(), page: sp(params, "page"), sort: sp(params, "sort"), dir: dirOf(sp(params, "dir")) } as const;
   const d = await reportsData(teams.map((t) => t.id), f);
   const href = (changes: Record<string, string>) => hrefWith("/dashboard/reports", params, changes);
   const statusOptions = tab === "monthly" ? [{ value: "COMPLETED", label: "Completed" }] : [{ value: "SUBMITTED", label: "Submitted" }, { value: "REVIEWED", label: "Reviewed" }];
@@ -51,7 +51,7 @@ export default async function PerformanceReportPage({ searchParams }: { searchPa
             Showing names matching “{f.q}”. <a href={href({ q: "" })} className="underline">Clear search</a>
           </p>
         )}
-        <DashTable head={["Name", "Departments", "Date", "Status", "Action"]}>
+        <DashTable head={["Name", "Departments", "Date", "Score", "Status", "Action"]} server={{ keys: ["name", "team", "date", "score", tab === "monthly" ? null : "status", null], sort: f.sort, dir: f.dir }}>
           {d.rows.map((r) => (
             <tr key={r.id}>
               <Td>
@@ -62,13 +62,14 @@ export default async function PerformanceReportPage({ searchParams }: { searchPa
               </Td>
               <Td>{r.team}</Td>
               <Td>{formatDate(r.date)}</Td>
+              <Td>{r.score != null ? `${Math.round(r.score)}%` : "—"}</Td>
               <Td><StatusPill>{r.status}</StatusPill></Td>
               <Td>
                 <Link href={r.href} className="underline underline-offset-4">View</Link>
               </Td>
             </tr>
           ))}
-          {!d.rows.length && <EmptyRow cols={5}>No {tab === "monthly" ? "monthly evaluations" : "weekly reports"} match these filters.</EmptyRow>}
+          {!d.rows.length && <EmptyRow cols={6}>No {tab === "monthly" ? "monthly evaluations" : "weekly reports"} match these filters.</EmptyRow>}
         </DashTable>
         <Pagination page={d.page} pages={d.pages} href={(p) => hrefWith("/dashboard/reports", params, { page: String(p) })} />
       </Panel>

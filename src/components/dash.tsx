@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { BENCHMARK } from "@/lib/kpi";
 import { cn } from "@/lib/utils";
+import { SmartTable, type ServerSort } from "./smart-table";
 
 type Params = Record<string, string | string[] | undefined>;
 
@@ -84,10 +85,9 @@ export function StatusPill({ children }: { children: React.ReactNode }) {
 }
 
 /** Table with the Figma look: plain header row, grey zebra rows, horizontal scroll on small screens. */
-export function DashTable({ head, children, minWidth = 640 }: { head: string[]; children: React.ReactNode; minWidth?: number }) {
+export function DashTable({ head, children, minWidth = 640, server }: { head: string[]; children: React.ReactNode; minWidth?: number; server?: ServerSort }) {
   return (
-    <div className="-mx-1 overflow-x-auto px-1">
-      <table className="w-full border-separate border-spacing-y-1.5 text-sm" style={{ minWidth }}>
+    <SmartTable wrapperClassName="-mx-1 px-1" tableClassName="w-full border-separate border-spacing-y-1.5 text-sm" tableStyle={{ minWidth }} server={server}>
         <thead>
           <tr>
             {head.map((h) => (
@@ -96,8 +96,7 @@ export function DashTable({ head, children, minWidth = 640 }: { head: string[]; 
           </tr>
         </thead>
         <tbody className="[&>tr:nth-child(odd)>td]:bg-[#f7f7f7] [&>tr>td:first-child]:rounded-l-xl [&>tr>td:last-child]:rounded-r-xl">{children}</tbody>
-      </table>
-    </div>
+    </SmartTable>
   );
 }
 
