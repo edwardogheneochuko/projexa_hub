@@ -3,7 +3,7 @@ import Link from "next/link";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
-import { isFounder, managedTeamIds } from "@/lib/permissions";
+import { isFounder, managedTeamIds, viewTeamIds } from "@/lib/permissions";
 import { currentMonth, isValidMonth, monthLabel, monthOptions } from "@/lib/periods";
 import { sp, type SearchParams } from "@/lib/utils";
 import { Badge, Card, EmptyState, FilterBar, FilterSelect, PageHeader, TableWrap } from "@/components/ui";
@@ -13,7 +13,9 @@ export const metadata: Metadata = { title: "Monthly evaluations" };
 export default async function EvaluationsPage({ searchParams }: { searchParams: SearchParams }) {
   const user = await requireUser();
   const params = await searchParams;
-  const managed = managedTeamIds(user);
+  const managed = viewTeamIds(user);
+  const writable = managedTeamIds(user);
+  const canWrite = writable === null || writable.length > 0;
   const isManager = managed === null || managed.length > 0;
   const teamId = sp(params, "team");
   const personId = sp(params, "person");
@@ -53,7 +55,7 @@ export default async function EvaluationsPage({ searchParams }: { searchParams: 
       <PageHeader
         title="Monthly performance evaluations"
         description="Written evaluations covering attendance, KPI achievement, reporting consistency, contributions, strengths and areas for improvement. History is kept for future reference."
-        actions={isManager && <Link href="/analytics/evaluations/write" className="btn-primary">Write evaluation</Link>}
+        actions={canWrite && <Link href="/analytics/evaluations/write" className="btn-primary">Write evaluation</Link>}
       />
       <FilterBar resetHref="/analytics/evaluations">
         {isFounder(user) && <FilterSelect name="team" label="Department / team" value={teamId} allLabel="All teams" options={teams.map((t) => ({ value: t.id, label: t.name }))} />}

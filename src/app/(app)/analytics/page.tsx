@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
-import { isFounder, isHead } from "@/lib/permissions";
+import { isFounder, isHead, isLead } from "@/lib/permissions";
 import { sp, type SearchParams } from "@/lib/utils";
 import { FilterBar, FilterSelect, PageHeader } from "@/components/ui";
 import { OrgDashboard, PersonDashboard, RANGE_OPTIONS, TeamDashboard, parseRange } from "@/components/dashboards";
@@ -56,7 +56,7 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Se
     );
   }
 
-  if (isHead(user) && user.team) {
+  if ((isHead(user) || isLead(user)) && user.team) {
     return (
       <>
         <PageHeader title={`${user.team.name} dashboard`} description="Your department's attendance, KPIs, reporting and evaluations." />

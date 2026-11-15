@@ -70,7 +70,7 @@ export default async function InvitationsPage() {
             <SubmitButton className="btn-primary w-full">Generate link</SubmitButton>
           </ActionForm>
           <p className="mt-4 text-xs text-muted">
-            Anyone with an active link can sign up, so share it only with your team. People join as a Department Head or Team Member; you can change anyone&apos;s role or department later in Settings.
+            Anyone with an active link can sign up, so share it only with your team. Representatives can only join Alumni or Campus Structure. You can change anyone&apos;s role or department later in Settings.
           </p>
         </Card>
 

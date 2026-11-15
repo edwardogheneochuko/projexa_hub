@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { prisma } from "@/lib/db";
 import { MIN_PASSWORD } from "@/lib/accounts";
 import { INVITE_ROLES, STATUS_TEXT, findInvite } from "@/lib/invites";
+import { REP_TEAM_SLUGS } from "@/lib/permissions";
 import { ActionForm, SubmitButton } from "@/components/forms";
 import { AuthLink, AuthShell, UsernameInput } from "@/components/auth";
 import { joinTeam } from "../actions";
@@ -11,7 +12,11 @@ export const metadata: Metadata = { title: "Join Projexa Hub Central" };
 export default async function JoinPage({ params }: { params: Promise<{ code: string }> }) {
   const { code } = await params;
   const { status, invite } = await findInvite(code);
-  const teams = invite && !invite.teamId ? await prisma.team.findMany({ orderBy: { sortOrder: "asc" } }) : [];
+  // Representatives can only pick Alumni or Campus Structure.
+  const teams =
+    invite && !invite.teamId
+      ? await prisma.team.findMany({ where: invite.role === "REP" ? { slug: { in: REP_TEAM_SLUGS } } : {}, orderBy: { sortOrder: "asc" } })
+      : [];
 
   return (
     <AuthShell subtitle="Create your account" footer={<AuthLink href="/login">Already have an account? Sign in</AuthLink>}>

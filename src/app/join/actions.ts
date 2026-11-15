@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db";
 import { EMAIL_DOMAIN, MIN_PASSWORD, createLink, isValidEmail, isValidUsername, normaliseEmail, toEmail } from "@/lib/accounts";
 import { sendLinkEmail } from "@/lib/mail";
 import { STATUS_TEXT, findInvite } from "@/lib/invites";
+import { REP_TEAM_SLUGS } from "@/lib/permissions";
 import type { ActionResult } from "@/lib/utils";
 
 const str = (fd: FormData, k: string, max = 200) => String(fd.get(k) ?? "").trim().slice(0, max);
@@ -25,7 +26,9 @@ export async function joinTeam(code: string, _prev: ActionResult, fd: FormData):
 
   if (name.length < 2) return { error: "Enter your full name." };
   if (!isValidUsername(username)) return { error: "Username can use lowercase letters, numbers and . _ - (for example tobi.adeyemi)." };
-  if (!teamId || !(await prisma.team.findUnique({ where: { id: teamId } }))) return { error: "Choose your department." };
+  const team = teamId ? await prisma.team.findUnique({ where: { id: teamId } }) : null;
+  if (!team) return { error: "Choose your department." };
+  if (invite.role === "REP" && !REP_TEAM_SLUGS.includes(team.slug)) return { error: "Representatives join the Alumni or Campus Structure department." };
   if (!isValidEmail(contactEmail)) return { error: "Enter a valid email address, e.g. name@gmail.com." };
   if (contactEmail.endsWith(`@${EMAIL_DOMAIN}`)) return { error: `Use your real inbox (e.g. Gmail), not a @${EMAIL_DOMAIN} address.` };
   if (password.length < MIN_PASSWORD) return { error: `Choose a password of at least ${MIN_PASSWORD} characters.` };

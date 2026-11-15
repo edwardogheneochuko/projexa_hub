@@ -3,7 +3,7 @@ import Link from "next/link";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
-import { canManageTeam, isFounder, managedTeamIds } from "@/lib/permissions";
+import { canManageTeam, isFounder, managedTeamIds, viewTeamIds } from "@/lib/permissions";
 import { attendanceCounts, attendanceRate } from "@/lib/metrics";
 import { formatDate, isValidDate } from "@/lib/periods";
 import { pct, sp, type SearchParams } from "@/lib/utils";
@@ -18,7 +18,9 @@ const LIMIT = 300;
 export default async function AttendancePage({ searchParams }: { searchParams: SearchParams }) {
   const user = await requireUser();
   const params = await searchParams;
-  const managed = managedTeamIds(user);
+  const managed = viewTeamIds(user);
+  const writable = managedTeamIds(user);
+  const canWrite = writable === null || writable.length > 0;
   const isManager = managed === null || managed.length > 0;
 
   const teamId = sp(params, "team");
@@ -66,7 +68,7 @@ export default async function AttendancePage({ searchParams }: { searchParams: S
       <PageHeader
         title="Attendance"
         description={isManager ? "Attendance records for meetings and training sessions." : "Your attendance history."}
-        actions={isManager && <Link href="/analytics/attendance/record" className="btn-primary">Record attendance</Link>}
+        actions={canWrite && <Link href="/analytics/attendance/record" className="btn-primary">Record attendance</Link>}
       />
       <FilterBar resetHref="/analytics/attendance">
         {isFounder(user) && <FilterSelect name="team" label="Department / team" value={teamId} allLabel="All teams" options={teams.map((t) => ({ value: t.id, label: t.name }))} />}

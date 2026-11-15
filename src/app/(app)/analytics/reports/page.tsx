@@ -3,7 +3,7 @@ import Link from "next/link";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
-import { isFounder, managedTeamIds } from "@/lib/permissions";
+import { isFounder, viewTeamIds } from "@/lib/permissions";
 import { reportingStatus } from "@/lib/metrics";
 import { currentWeek, isValidWeek, weekLabel, weekOptions } from "@/lib/periods";
 import { sp, type SearchParams } from "@/lib/utils";
@@ -14,7 +14,7 @@ export const metadata: Metadata = { title: "Weekly reports" };
 export default async function ReportsPage({ searchParams }: { searchParams: SearchParams }) {
   const user = await requireUser();
   const params = await searchParams;
-  const managed = managedTeamIds(user);
+  const managed = viewTeamIds(user);
   const isManager = managed === null || managed.length > 0;
 
   const teamId = sp(params, "team");

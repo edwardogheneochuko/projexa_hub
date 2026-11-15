@@ -1,6 +1,6 @@
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { ROLE_LABELS, type Role, isFounder, isHead, managedTeamIds } from "@/lib/permissions";
+import { ROLE_LABELS, type Role, isFounder, isHead, isLeader, managedTeamIds } from "@/lib/permissions";
 import { liveTeamSlugs, visibleSpaces } from "@/lib/hq";
 import { AppShell, type NavGroup, type NavItem } from "@/components/nav";
 import { logout } from "../auth-actions";
@@ -8,7 +8,8 @@ import { logout } from "../auth-actions";
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const user = await requireUser();
   const founder = isFounder(user);
-  const leader = founder || isHead(user);
+  const leader = isLeader(user);
+  const reviewer = founder || isHead(user);
 
   // Alumni and Campus Structure sections (PRD §4.3–4.4), for whoever can use that HQ workspace.
   const spaces = visibleSpaces(user, await liveTeamSlugs()).map((s) => s.key);
@@ -56,7 +57,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   // Bell: weekly reports waiting for review in the teams this person manages.
   const managed = managedTeamIds(user);
-  const pending = leader
+  const pending = reviewer
     ? await prisma.weeklyReport.count({ where: { status: "SUBMITTED", ...(managed === null ? {} : { teamId: { in: managed } }) } })
     : 0;
 
@@ -68,7 +69,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       logout={logout}
       search={leader ? { action: "/dashboard", placeholder: "Search team members…" } : { action: "/directory", placeholder: "Search the directory…" }}
       settingsHref={founder ? "/settings" : "/profile"}
-      alerts={leader ? { href: "/dashboard/reports?status=SUBMITTED", count: pending } : null}
+      alerts={reviewer ? { href: "/dashboard/reports?status=SUBMITTED", count: pending } : null}
     >
       {children}
     </AppShell>

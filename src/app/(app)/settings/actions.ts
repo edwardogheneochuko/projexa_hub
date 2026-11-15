@@ -7,10 +7,10 @@ import { requireFounder } from "@/lib/auth";
 import { EMAIL_DOMAIN, isValidEmail, isValidUsername, normaliseEmail, toEmail } from "@/lib/accounts";
 import { changeEmail, emailTaken, mailError, sendInvite, sendReset } from "@/lib/account-mail";
 import { INVITE_DAYS, INVITE_ROLES, newInviteCode } from "@/lib/invites";
+import { REP_TEAM_SLUGS, ROLES, type Role } from "@/lib/permissions";
 import type { ActionResult } from "@/lib/utils";
 
 const str = (fd: FormData, k: string, max = 500) => String(fd.get(k) ?? "").trim().slice(0, max);
-const ROLES = ["FOUNDER", "HEAD", "MEMBER"];
 
 export async function saveUser(id: string | null, _prev: ActionResult, fd: FormData): Promise<ActionResult> {
   const founder = await requireFounder();
@@ -23,9 +23,11 @@ export async function saveUser(id: string | null, _prev: ActionResult, fd: FormD
   if (!isValidUsername(username)) {
     return { error: "Username can use lowercase letters, numbers and . _ - (for example tobi.adeyemi)." };
   }
-  if (!ROLES.includes(role)) return { error: "Choose a role." };
-  if (role !== "FOUNDER" && !teamId) return { error: "Department Heads and Team Members must belong to a department or team." };
-  if (teamId && !(await prisma.team.findUnique({ where: { id: teamId } }))) return { error: "That department no longer exists." };
+  if (!ROLES.includes(role as Role)) return { error: "Choose a role." };
+  if (role !== "FOUNDER" && !teamId) return { error: "Everyone except the Founder must belong to a department." };
+  const team = teamId ? await prisma.team.findUnique({ where: { id: teamId } }) : null;
+  if (teamId && !team) return { error: "That department no longer exists." };
+  if (role === "REP" && !REP_TEAM_SLUGS.includes(team?.slug ?? "")) return { error: "Alumni / Campus Representatives must belong to the Alumni or Campus Structure department." };
 
   const active = fd.get("active") === "on";
   if (id === founder.id && (role !== "FOUNDER" || !active)) {
@@ -81,7 +83,9 @@ export async function createTeamInvite(_prev: ActionResult, fd: FormData): Promi
   const maxRaw = str(fd, "maxUses");
   const maxUses = maxRaw ? Number(maxRaw) : null;
   if (!INVITE_ROLES[role]) return { error: "Choose a role." };
-  if (teamId && !(await prisma.team.findUnique({ where: { id: teamId } }))) return { error: "That department no longer exists." };
+  const team = teamId ? await prisma.team.findUnique({ where: { id: teamId } }) : null;
+  if (teamId && !team) return { error: "That department no longer exists." };
+  if (role === "REP" && team && !REP_TEAM_SLUGS.includes(team.slug)) return { error: "Alumni / Campus Representatives must belong to the Alumni or Campus Structure department." };
   if (!INVITE_DAYS.includes(days)) return { error: "Choose how long the link stays valid." };
   if (maxUses !== null && (!Number.isInteger(maxUses) || maxUses < 1 || maxUses > 500)) return { error: "Number of people must be between 1 and 500, or left empty." };
   await prisma.teamInvite.create({

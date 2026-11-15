@@ -5,7 +5,13 @@ import type { TeamInvite } from "@prisma/client";
 import { prisma } from "./db";
 import { appUrl } from "./accounts";
 
-export const INVITE_ROLES: Record<string, string> = { MEMBER: "Team Member", HEAD: "Department Head" };
+/** Roles a person can join with (never Founder). */
+export const INVITE_ROLES: Record<string, string> = {
+  MEMBER: "Team Member",
+  LEAD: "Functional Lead",
+  HEAD: "Departmental Lead",
+  REP: "Alumni / Campus Representative",
+};
 export const INVITE_DAYS = [1, 7, 30];
 
 export const inviteLink = async (code: string) => `${await appUrl()}/join/${code}`;

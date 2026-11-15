@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { requireUser } from "@/lib/auth";
-import { isFounder, isHead } from "@/lib/permissions";
+import { isFounder, isLeader } from "@/lib/permissions";
 import { AccessCard, Gateway } from "@/components/gateway";
 
 export const metadata: Metadata = { title: "Projexa Hub Center" };
@@ -10,7 +10,7 @@ export default async function CenterSelectionPage() {
   const founder = isFounder(user);
 
   // Founder: team reviews across all departments. Head: their department's overview. Member: their own performance.
-  const teamHref = founder ? "/dashboard/reviews" : isHead(user) ? "/dashboard" : user.teamId ? "/analytics" : null;
+  const teamHref = founder ? "/dashboard/reviews" : isLeader(user) ? "/dashboard" : user.teamId ? "/analytics" : null;
 
   return (
     <Gateway

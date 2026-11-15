@@ -7,6 +7,7 @@ import { prisma } from "@/lib/db";
 import { SESSION_COOKIE, SESSION_COOKIE_OPTIONS, signSession } from "@/lib/session";
 import { MIN_PASSWORD, createLink, findLink, recentLinks, toEmail, consumeLink, usernameOf } from "@/lib/accounts";
 import { sendLinkEmail } from "@/lib/mail";
+import { LOGIN_BLOCKED_MESSAGE, clearLoginFailures, isLoginBlocked, recordLoginFailure } from "@/lib/login-limit";
 import type { ActionResult } from "@/lib/utils";
 
 const DUMMY_HASH = bcrypt.hashSync("not-a-real-password", 10);
@@ -28,12 +29,17 @@ export async function login(_prev: ActionResult, fd: FormData): Promise<ActionRe
   const password = String(fd.get("password") ?? "");
   if (!username || !password) return { error: "Enter your username and password." };
 
-  const user = await prisma.user.findUnique({ where: { email: toEmail(username) } });
+  const email = toEmail(username);
+  // Checked before the password, so a paused account can't be used to test guesses.
+  if (await isLoginBlocked(email)) return { error: LOGIN_BLOCKED_MESSAGE };
+  const user = await prisma.user.findUnique({ where: { email } });
   // Compare against a dummy hash when there's no password to keep timing similar.
   const ok = await bcrypt.compare(password, user?.passwordHash ?? DUMMY_HASH);
   if (!user || !user.passwordHash || !ok || !user.active) {
+    await recordLoginFailure(email);
     return { error: "Incorrect username or password." };
   }
+  await clearLoginFailures(email);
   if (user.joinedViaId && !user.emailVerifiedAt) {
     return { error: `Verify your email first: open the link we sent to ${user.contactEmail}. Didn’t get it? Use “Forgot password?” to send it again.` };
   }

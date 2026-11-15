@@ -84,8 +84,8 @@ export default async function DirectoryPage({ searchParams }: { searchParams: Se
               .map((t) => ({ t, members: people.filter((p) => p.teamId === t.id) }))
               .filter((x) => x.members.length > 0)
               .map(({ t, members }) => {
-                const heads = members.filter((m) => m.role === "HEAD");
-                const rest = members.filter((m) => m.role !== "HEAD");
+                const heads = members.filter((m) => m.role === "HEAD" || m.role === "LEAD");
+                const rest = members.filter((m) => m.role !== "HEAD" && m.role !== "LEAD");
                 return (
                   <div key={t.id} className="card p-4">
                     <h2 className="mb-3 font-semibold text-brand">{t.name}</h2>

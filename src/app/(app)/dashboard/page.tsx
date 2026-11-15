@@ -67,7 +67,7 @@ export default async function TeamOverviewPage({ searchParams }: { searchParams:
       >
         <div className="mb-4 flex flex-wrap gap-3">
           {teams.length > 1 && <UrlSelect name="team" label="Departments" value={f.team} options={teams.map((t) => ({ value: t.id, label: t.name }))} />}
-          <UrlSelect name="role" label="Roles" value={f.role} options={[{ value: "HEAD", label: "Team Leader" }, { value: "MEMBER", label: "Team Member" }]} />
+          <UrlSelect name="role" label="Roles" value={f.role} options={Object.entries(ROLE_NAMES).filter(([v]) => v !== "FOUNDER").map(([value, label]) => ({ value, label }))} />
         </div>
         {f.q && (
           <p className="mb-3 text-sm text-neutral-700">

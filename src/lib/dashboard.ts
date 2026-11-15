@@ -5,7 +5,7 @@ import type { Prisma } from "@prisma/client";
 import { prisma } from "./db";
 import type { CurrentUser } from "./auth";
 import { requireUser } from "./auth";
-import { isFounder, isHead, managedTeamIds } from "./permissions";
+import { ROLE_LABELS, type Role, isLeader, viewTeamIds } from "./permissions";
 import { getPerformance, kpiAverage } from "./metrics";
 import { currentMonth, formatDate, recentMonths, recentWeeks, weekRange, weekShort, weeksOfMonth } from "./periods";
 
@@ -14,16 +14,16 @@ export const PAGE_SIZE = 10;
 /** Dashboards are for the Founder and Department Heads. Team Members go to their own dashboard. */
 export async function requireLeader(): Promise<CurrentUser> {
   const user = await requireUser();
-  if (!isFounder(user) && !isHead(user)) redirect("/analytics");
+  if (!isLeader(user)) redirect("/analytics");
   return user;
 }
 
 export async function scopeTeams(user: CurrentUser) {
-  const managed = managedTeamIds(user);
+  const managed = viewTeamIds(user);
   return prisma.team.findMany({ where: managed === null ? {} : { id: { in: managed } }, orderBy: { sortOrder: "asc" } });
 }
 
-export const ROLE_NAMES: Record<string, string> = { HEAD: "Team Leader", MEMBER: "Team Member" };
+export const ROLE_NAMES: Record<string, string> = ROLE_LABELS as Record<Role, string>;
 
 export function pageOf(raw: string, total: number) {
   const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
@@ -42,7 +42,7 @@ export async function overviewData(
 
   const where: Prisma.UserWhereInput = { ...inScope };
   if (f.team && teamIds.includes(f.team)) where.teamId = f.team;
-  if (f.role === "HEAD" || f.role === "MEMBER") where.role = f.role;
+  if (f.role in ROLE_NAMES && f.role !== "FOUNDER") where.role = f.role;
   if (f.status === "active") where.active = true;
   if (f.status === "inactive") where.active = false;
   if (f.q) where.name = { contains: f.q, mode: "insensitive" };

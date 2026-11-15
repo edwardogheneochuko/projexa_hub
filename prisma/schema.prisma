@@ -111,6 +111,16 @@ model TeamInvite {
   members     User[]    @relation("JoinedVia")
 }
 
+/// Failed sign-in attempts, used to slow down password guessing. Old rows are cleared automatically.
+model LoginAttempt {
+  id        String   @id @default(cuid())
+  /// "user:<sign-in email>" or "ip:<address>"
+  key       String
+  createdAt DateTime @default(now())
+
+  @@index([key, createdAt])
+}
+
 /// Single-use links sent by email. Only a hash of the token is stored.
 model AuthToken {
   id        String    @id @default(cuid())

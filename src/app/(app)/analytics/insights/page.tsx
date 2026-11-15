@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
-import { isFounder, managedTeamIds } from "@/lib/permissions";
+import { isFounder, viewTeamIds } from "@/lib/permissions";
 import { getPerformance, BENCHMARK, METRIC_NOTES } from "@/lib/metrics";
 import { formatDate, monthLabel, recentMonths, recentWeeks, weekRange, weekShort } from "@/lib/periods";
 import { pct, sp, type SearchParams } from "@/lib/utils";
@@ -24,7 +24,7 @@ const RANGES = [
 
 export default async function InsightsPage({ searchParams }: { searchParams: SearchParams }) {
   const user = await requireUser();
-  const managed = managedTeamIds(user);
+  const managed = viewTeamIds(user);
   if (managed !== null && managed.length === 0) notFound();
   const params = await searchParams;
   const weeks = RANGES.some((r) => r.value === sp(params, "weeks")) ? Number(sp(params, "weeks")) : 13;

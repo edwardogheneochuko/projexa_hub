@@ -48,21 +48,24 @@ npm run account:link -- <username> --email <address> --create-founder "Full Name
 
 This uses the database in `DATABASE_URL` and links to `APP_URL` (default: the live site).
 
-## Roles and permissions (PRD §8)
+## Roles and permissions (PRD §6, §8)
 
 All permission rules live in `src/lib/permissions.ts` and `src/lib/hq.ts`.
 
-| | Founder | Department Head | Team Member |
-|---|---|---|---|
-| Analytics dashboard | Organisation-wide, filter by team, individual and period | Own department | Personal |
-| Record attendance, maintain KPIs | All teams | Own team | — |
-| Weekly reports | View and review all | View and review own team | Submit and edit own until reviewed |
-| Monthly evaluations | Write and view all | Write and view own team | View own |
-| Team KPI matrix | All teams | Own team (edit) | Own team (read) |
-| HQ workspaces | All | Own department | Own department (add and edit records, not delete) |
-| Founder HQ | Yes | — | — |
-| Finance records, HR records | Yes | Only with an explicit grant | Only with an explicit grant |
-| Settings and permissions | Yes | — | — |
+| | Founder | Departmental Lead | Functional Lead | Team Member | Alumni / Campus Representative |
+|---|---|---|---|---|---|
+| Dashboards (Team Overview, Reviews, Performance) | All departments | Own department | Own department (read-only) | — (own performance) | — (own performance) |
+| Record attendance, maintain KPIs | All teams | Own team | — | — | — |
+| Weekly reports | View and review all | View and review own team | View own team; submit own | Submit and edit own until reviewed | Submit and edit own until reviewed |
+| Monthly evaluations | Write and view all | Write and view own team | View own team | View own | View own |
+| Alumni / Campus Structure sections | Both | Own department's | Own department's | Own department's | Own department's (Alumni or Campus only) |
+| HQ workspaces | All | Own department (incl. delete) | Own department (add and edit) | Own department (add and edit) | Own department (add and edit) |
+| Founders HQ, Settings, Team invitations | Yes | — | — | — | — |
+| Finance records, HR records | Yes | Only with an explicit grant | Only with an explicit grant | Only with an explicit grant | Only with an explicit grant |
+
+Representatives can only belong to the Alumni or Campus Structure department.
+
+**Sign-in protection:** after 5 wrong passwords in 15 minutes a username is paused for 15 minutes (20 per internet connection). "Forgot password?" still works while paused.
 
 Confidential access is granted per person in **Settings & permissions**. Belonging to the Finance department does **not** grant Finance access on its own (PRD §8, Confidentiality).
 
